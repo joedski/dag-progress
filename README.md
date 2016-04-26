@@ -55,7 +55,7 @@ const render = ({ props, context }) => {
 
 	return (
 		h.( 'div', { 'class': 'interaction-progress' }, [
-			`Progress: ${ Math.round( stepProgress.progress * 100 ) }%`
+			`Progress: ${ Math.round( stepProgress.value * 100 ) }%`
 		])
 	);
 };
