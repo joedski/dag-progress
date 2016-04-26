@@ -1,8 +1,24 @@
+// @flow
 
 const Fraction = require( 'fraction.js' );
 const toposort = require( 'toposort' );
 
-module.exports = function dagProgress( adjacencies, vertexOptions ) {
+type VertexOptions = {
+	progress?: boolean
+};
+
+type Progress = {
+	value: number,
+	fraction: Fraction
+};
+
+// Bluh.
+type Vertex = any;
+
+module.exports = function dagProgress(
+	adjacencies :Map<Vertex, Set<Vertex>>,
+	vertexOptions :Map<Vertex, VertexOptions>
+) :Map<Vertex, Progress> {
 	vertexOptions = normalizedVertexOptions( adjacencies, vertexOptions );
 
 	let adjacenciesReversed = reverse( adjacencies );
@@ -67,11 +83,11 @@ const reverse = exports.reverse = function( adjacencies ) {
 
 
 
-const topologicalOrder = exports.topologicalOrder = function( adjacencies ) {
+const topologicalOrder = exports.topologicalOrder = function( adjacencies ) :Array<any> {
 	let adjsArray = [];
 
 	adjacencies.forEach( adjs => {
-		adjsArray.push([ ...adjs ]);
+		adjsArray.push( Array.from( adjs ) );
 	});
 
 	return toposort( adjsArray );
@@ -80,14 +96,16 @@ const topologicalOrder = exports.topologicalOrder = function( adjacencies ) {
 
 
 const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOptions ) {
+	let defaultOptions = { progress: true };
 	let lengths = new Map();
 
 	let length = ( v ) => {
 		// Potential optimization: If we find the sources first, we can preemptively assign them values based on their progress option.
 		if( lengths.has( v ) === false ) {
 			let initial;
+			let options = vertexOptions.get( v ) || defaultOptions;
 
-			if( vertexOptions.get( v ).progress === false ) {
+			if( options.progress === false ) {
 				initial = 0;
 			}
 			else {
@@ -98,16 +116,21 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 			return initial;
 		}
 
-		return lengths.get( v );
+		// (|| 1) from flow.
+		return lengths.get( v ) || 1;
 	}
 
 	order.forEach( v => {
 		let currentValue = length( v );
+		let nextVertices = adjacencies.get( v );
 
-		adjacencies.get( v ).forEach( nv => {
+		// Flow stuff.  Shouldn't really be needed.
+		if( nextVertices == null ) return;
+
+		nextVertices.forEach( nv => {
 			let currentNextValue = length( nv );
 			let newNextValue;
-			let nextOptions = vertexOptions.get( nv );
+			let nextOptions = vertexOptions.get( nv ) || defaultOptions;
 
 			if( nextOptions.progress === false ) {
 				newNextValue = currentValue;
@@ -127,13 +150,14 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 
 
 
-const progresses = exports.progresses = function( pathLengthsForward, pathLengthsReverse ) {
+const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward, pathLengthsReverse ) {
 	let progresses = new Map();
 
 	pathLengthsForward.forEach( ( lf, v ) => {
 		let lr = pathLengthsReverse.get( v );
 		let progress = {
-			fraction: (new Fraction( lf )).div( lf + lr )
+			fraction: (new Fraction( lf )).div( lf + lr ),
+			value: 0
 		};
 
 		progress.value = Number( progress.fraction );
