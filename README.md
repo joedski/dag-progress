@@ -5,6 +5,8 @@ Given a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_
 
 I'm using this to display meaningful progress values to a User when they are going through a branching interaction which may allow them to skip over parts or take different courses through that interaction.  Representing the interaction as a directed acyclic graph allows this easily.
 
+The progress calculation is very simple: Given a vertex, the length of the longest path possible from any source to that vertex divided by the length of the longest path possible from any source to any sink which conatains that vertex is the progress value for that vertex.  This definition works surprisingly well given even quite disparate branch lengths in an interaction, and handles no-progress vertices quite well, too.
+
 
 
 Dependencies
@@ -60,24 +62,10 @@ const render = ({ props, context }) => {
 ```
 
 
-Algorithm
----------
 
-Progress calculation is very simple: `P = B / (B + A)` where...
-- `P` is the Progress Value of a given Vertex
-- `B` is the greatest Path length from any Source to the given Vertex
-- `A` is the greatest Path length from the given Vertex to any Sink
+Degenerate Cases
+----------------
 
-Calculating such greatest path lengths in a digraph is a linear time operation, similar to calculating the number of different paths.
+### Single Vertex Paths
 
-To find the greatest path length from any Source to a given Vertex:
-1. Let the Value of any Vertex without a defined Value be 0.  This value represents the Greatest Path Length from Any Source to a given Vertex.
-2. For each Vertex in Topological Order:
-	1. For each Next Vertex the Current Vertex connects to:
-		1. If the Next Vertex has `progress: true`, then its Next Value is the Current Vertex's Value + 1.
-			1. Otherwise, the Next Value is the Current Vertex's Value.
-		2. If the Next Vertex's own Value is less than the Next Value, assign the Next Value as that Next Vertex's Own Value.
-
-To find the greatest path length from any Vertex to any Sink, simply reverse the Graph and apply the same process, and the Value will represent the greatest path length from a given Vertex to any Sink.
-
-Progress is then calculated as stated above.
+A single Vertex will, if does not have `progress: false`, have the Progress value 1.  If it does have `progress: false` then it's a undefined, though will probably result in a div-by-0 error, which makes you a bad person who should feel bad.

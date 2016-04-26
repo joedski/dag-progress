@@ -84,8 +84,17 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 
 	let length = ( v ) => {
 		if( lengths.has( v ) === false ) {
-			lengths.set( v, 1 );
-			return 1;
+			let initial;
+
+			if( vertexOptions.get( v ).progress === false ) {
+				initial = 0;
+			}
+			else {
+				initial = 1;
+			}
+
+			lengths.set( v, initial );
+			return initial;
 		}
 
 		return lengths.get( v );
