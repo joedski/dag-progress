@@ -83,6 +83,7 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 	let lengths = new Map();
 
 	let length = ( v ) => {
+		// Potential optimization: If we find the sources first, we can preemptively assign them values based on their progress option.
 		if( lengths.has( v ) === false ) {
 			let initial;
 
@@ -108,11 +109,11 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 			let newNextValue;
 			let nextOptions = vertexOptions.get( nv );
 
-			if( nextOptions.progress ) {
-				newNextValue = currentValue + 1;
+			if( nextOptions.progress === false ) {
+				newNextValue = currentValue;
 			}
 			else {
-				newNextValue = currentValue;
+				newNextValue = currentValue + 1;
 			}
 
 			if( newNextValue > currentNextValue ) {
