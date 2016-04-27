@@ -23,9 +23,9 @@ module.exports = function dagProgress(
 
 	let adjacenciesReversed = reverse( adjacencies );
 	let orderForward = topologicalOrder( adjacencies );
-	// let orderReverse = topologicalOrder( adjacenciesReversed );
-	let orderReverse = orderForward.slice();
-	orderReverse.reverse();
+	let orderReverse = topologicalOrder( adjacenciesReversed );
+	// let orderReverse = orderForward.slice();
+	// orderReverse.reverse();
 	let pathLengthsForward = pathLengths( adjacencies, orderForward, vertexOptions );
 	let pathLengthsReversed = pathLengths( adjacenciesReversed, orderReverse, vertexOptions );
 	let progresses = vertexProgresses( pathLengthsForward, pathLengthsReversed );
@@ -86,8 +86,11 @@ const reverse = exports.reverse = function( adjacencies ) {
 const topologicalOrder = exports.topologicalOrder = function( adjacencies ) :Array<any> {
 	let adjsArray = [];
 
-	adjacencies.forEach( adjs => {
-		adjsArray.push( Array.from( adjs ) );
+	adjacencies.forEach( ( adjs, va ) => {
+		// adjsArray.push([ v, Array.from( adjs ) ]);
+		adjs.forEach( ( vb ) => {
+			adjsArray.push([ va, vb ]);
+		});
 	});
 
 	return toposort( adjsArray );
@@ -156,7 +159,7 @@ const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward
 	pathLengthsForward.forEach( ( lf, v ) => {
 		let lr = pathLengthsReverse.get( v );
 		let progress = {
-			fraction: (new Fraction( lf )).div( lf + lr ),
+			fraction: (new Fraction( lf )).div( lf + lr - 1 ),
 			value: 0
 		};
 
