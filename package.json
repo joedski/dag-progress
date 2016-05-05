@@ -9,7 +9,7 @@
     "build:es": "cross-env BABEL_ENV=es babel source --out-dir es",
     "build:commonjs": "cross-env BABEL_ENV=commonjs babel source --out-dir lib",
     "prepublish": "npm run clean && npm run build",
-    "preversion": "npm run clean && npm run test:lint",
+    "preversion": "npm run clean && npm run test",
     "version": "npm run build",
     "test": "ava"
   },
