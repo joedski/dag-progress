@@ -1,6 +1,6 @@
 {
   "name": "dag-progress",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Calculate user progress for each vertex in an acyclic digraph",
   "main": "lib/index.js",
   "repository": {
