@@ -3,6 +3,13 @@
   "version": "1.0.0-3",
   "description": "Calculate user progress for each vertex in an acyclic digraph",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joedski/dag-progress.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joedski/dag-progress/issues"
+  },
   "scripts": {
     "clean": "rimraf lib es",
     "build": "npm run build:commonjs && npm run build:es",
