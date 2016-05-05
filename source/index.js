@@ -28,7 +28,7 @@ module.exports = function dagProgress(
 	// orderReverse.reverse();
 	let pathLengthsForward = pathLengths( adjacencies, orderForward, vertexOptions );
 	let pathLengthsReversed = pathLengths( adjacenciesReversed, orderReverse, vertexOptions );
-	let progresses = vertexProgresses( pathLengthsForward, pathLengthsReversed );
+	let progresses = vertexProgresses( pathLengthsForward, pathLengthsReversed, vertexOptions );
 
 	return progresses;
 };
@@ -153,13 +153,23 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 
 
 
-const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward, pathLengthsReverse ) {
+const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward, pathLengthsReverse, vertexOptions ) {
 	let progresses = new Map();
 
 	pathLengthsForward.forEach( ( lf, v ) => {
 		let lr = pathLengthsReverse.get( v );
+		let ltotal = lf + lr;
+		let options = vertexOptions.get( v );
+
+		// This is to make up for double-counting the current vertex.
+		// If it doesn't contribute to progress, then it's still double counted,
+		// it's just that 2 * 0 is 0.
+		if( options.progress === true ) {
+			ltotal = ltotal - 1;
+		}
+
 		let progress = {
-			fraction: (new Fraction( lf )).div( lf + lr - 1 ),
+			fraction: (new Fraction( lf )).div( ltotal ),
 			value: 0
 		};
 

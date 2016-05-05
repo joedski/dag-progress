@@ -37,6 +37,8 @@ test( `the same graph in different valid topological orders should produce the s
 	});
 });
 
+
+
 test( `graph should produce same result as hand calculated result`, t => {
 	let graph = new Map([
 		[ "Start", new Set([ "Decide", "OhOkay" ]) ],
@@ -72,4 +74,63 @@ test( `graph should produce same result as hand calculated result`, t => {
 		t.is( p.value, progresses.get( v ).value, 
 			`Vertex "${ v }" should have progress ${ p.fraction.toFraction() }.` );
 	});
+});
+
+
+
+test( `graph with no-progress vertices at end should have progress values of 1 for all such vertices`, t => {
+	let graph = new Map([
+		[ "Start", new Set([ "Middle 1", "Middle 2" ]) ],
+		[ "Middle 1", new Set([ "Middle 3" ]) ],
+		[ "Middle 2", new Set([ "Middle 3" ]) ],
+		[ "Middle 3", new Set([ "End 1" ]) ],
+		[ "End 1", new Set([ "End 2" ]) ],
+	]);
+
+	let options = new Map([
+		[ "End 1", { progress: false } ],
+		[ "End 2", { progress: false } ],
+	]);
+
+	let progresses = dagProgress( graph, options );
+
+	t.is(
+		progresses.get( 'End 1' ).fraction.n,
+		progresses.get( 'End 1' ).fraction.d,
+		`"End 1" should have a progress fraction that equals 1.` );
+
+	t.is(
+		progresses.get( 'End 2' ).fraction.n,
+		progresses.get( 'End 2' ).fraction.d,
+		`"End 2" should have a progress fraction that equals 1.` );
+});
+
+
+
+test( `graph with no-progress vertices at start should have progress values of 0 for all such vertices`, t => {
+	let graph = new Map([
+		[ "Start 1", new Set([ "Start 2" ]) ],
+		[ "Start 2", new Set([ "Middle 1", "Middle 2" ]) ],
+		[ "Middle 1", new Set([ "Middle 3" ]) ],
+		[ "Middle 2", new Set([ "Middle 3" ]) ],
+		[ "Middle 3", new Set([ "End 1" ]) ],
+		[ "End 1", new Set([ "End 2" ]) ],
+	]);
+
+	let options = new Map([
+		[ "Start 1", { progress: false } ],
+		[ "Start 2", { progress: false } ],
+	]);
+
+	let progresses = dagProgress( graph, options );
+
+	t.is( progresses.get( 'Start 1' ).fraction.n, 0,
+		`"Start 1" should have a progress fraction that equals 0.` );
+	t.not( progresses.get( 'Start 1' ).fraction.d, 0,
+		`"Start 1" should have a progress fraction with non-0 denominator.` );
+
+	t.is( progresses.get( 'Start 2' ).fraction.n, 0,
+		`"Start 2" should have a progress fraction that equals 0.` );
+	t.not( progresses.get( 'Start 2' ).fraction.d, 0,
+		`"Start 2" should have a progress fraction with non-0 denominator.` );
 });
