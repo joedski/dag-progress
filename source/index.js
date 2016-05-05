@@ -177,8 +177,8 @@ const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward
 			fraction: fraction,
 			value: Number( fraction ),
 			// This allows doing things like calculating partial-graph progress.
-			longestAfter: lf - ownProgress,
-			longestBefore: lr - ownProgress,
+			longestAfter: lr - ownProgress,
+			longestBefore: lf - ownProgress,
 			own: ownProgress
 		};
 

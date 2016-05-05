@@ -71,8 +71,52 @@ test( `graph should produce same result as hand calculated result`, t => {
 	t.plan( expectedProgresses.size );
 
 	expectedProgresses.forEach( ( p, v ) => {
-		t.is( p.value, progresses.get( v ).value, 
+		t.is( p.value, progresses.get( v ).value,
 			`Vertex "${ v }" should have progress ${ p.fraction.toFraction() }.` );
+	});
+});
+
+
+
+test( `longestBefore, longestAfter, and own should, when calculated together, yield a fraction of the same value`, t => {
+	let graph = new Map([
+		[ "Start", new Set([ "Decide", "OhOkay" ]) ],
+		[ "Decide", new Set([ "DoOneThing", "StillNo" ]) ],
+		[ "DoOneThing", new Set([ "DoAnother" ]) ],
+		[ "OhOkay", new Set([ "StillNo" ]) ],
+		[ "DoAnother", new Set([ "WellThatWasFun" ]) ],
+		[ "StillNo", new Set([ "WellThatWasFun" ]) ],
+		[ "WellThatWasFun", new Set([ "Bye" ]) ],
+	]);
+
+	let progresses = dagProgress( graph );
+
+	let progressOf = ( fraction ) => ({
+		value: Number( fraction ),
+		fraction
+	});
+
+	// let expectedProgresses = new Map([
+	// 	[ "Start", progressOf( new Fraction( 1, 6 ) ) ],
+	// 	[ "Decide", progressOf( new Fraction( 2, 6 ) ) ],
+	// 	[ "OhOkay", progressOf( new Fraction( 2, 5 ) ) ],
+	// 	[ "DoOneThing", progressOf( new Fraction( 3, 6 ) ) ],
+	// 	[ "DoAnother", progressOf( new Fraction( 4, 6 ) ) ],
+	// 	[ "StillNo", progressOf( new Fraction( 3, 5 ) ) ],
+	// 	[ "WellThatWasFun", progressOf( new Fraction( 5, 6 ) ) ],
+	// 	[ "Bye", progressOf( new Fraction( 6, 6 ) ) ],
+	// ]);
+
+	t.plan( progresses.size );
+
+	progresses.forEach( ( p, v ) => {
+		let { fraction, longestBefore, longestAfter, own } = p;
+		let calculatedFraction = new Fraction( longestBefore + own, longestBefore + longestAfter + own );
+
+		let isEqual = fraction.d === calculatedFraction.d && fraction.n === calculatedFraction.n;
+
+		t.true( isEqual,
+			`Vertex "${ v }" calculated fraction ${ calculatedFraction.toFraction() } should equal algorithm-generated fraction ${ p.fraction.toFraction() }.` );
 	});
 });
 
