@@ -157,23 +157,30 @@ const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward
 	let progresses = new Map();
 
 	pathLengthsForward.forEach( ( lf, v ) => {
-		let lr = pathLengthsReverse.get( v );
-		let ltotal = lf + lr;
-		let options = vertexOptions.get( v );
+		let lr = pathLengthsReverse.get( v ) || 0;
+		let options = vertexOptions.get( v ) || { progress: true };
+		let ownProgress;
 
 		// This is to make up for double-counting the current vertex.
 		// If it doesn't contribute to progress, then it's still double counted,
 		// it's just that 2 * 0 is 0.
-		if( options.progress === true ) {
-			ltotal = ltotal - 1;
+		if( options.progress !== false ) {
+			ownProgress = 1;
+		}
+		else {
+			ownProgress = 0;
 		}
 
-		let progress = {
-			fraction: (new Fraction( lf )).div( ltotal ),
-			value: 0
-		};
+		let fraction = (new Fraction( lf )).div( lf + lr - ownProgress );
 
-		progress.value = Number( progress.fraction );
+		let progress = {
+			fraction: fraction,
+			value: Number( fraction ),
+			// This allows doing things like calculating partial-graph progress.
+			longestAfter: lr - ownProgress,
+			longestBefore: lf - ownProgress,
+			own: ownProgress
+		};
 
 		progresses.set( v, progress );
 	});
