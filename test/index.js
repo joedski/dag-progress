@@ -200,6 +200,6 @@ test( `graph with only one vertex and no edges should have progress of 1 for tha
 	t.true( progresses.has( "I'm all alone :(" ),
 		`Resultant progresses has a value for "I'm all alone :(".` );
 
-	t.is( progresses.get( "I'm all alone :(" ).value, 0,
-		`Resultant progress value for "I'm all alone :(" is 0.` );
+	t.is( progresses.get( "I'm all alone :(" ).value, 1,
+		`Resultant progress value for "I'm all alone :(" is 1.` );
 });
