@@ -19,7 +19,7 @@
     "preversion": "npm run clean && npm run test",
     "version": "npm run build",
     "test": "ava",
-    "test:headless": "ava --tap",
+    "test:headless": "ava --tap"
   },
   "keywords": [
     "dag",
