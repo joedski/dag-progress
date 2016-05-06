@@ -18,7 +18,8 @@
     "prepublish": "npm run clean && npm run build",
     "preversion": "npm run clean && npm run test",
     "version": "npm run build",
-    "test": "ava"
+    "test": "ava",
+    "test:headless": "ava --tap",
   },
   "keywords": [
     "dag",
