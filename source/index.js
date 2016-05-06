@@ -15,10 +15,11 @@ type Progress = {
 // Bluh.
 type Vertex = any;
 
-module.exports = function dagProgress(
+const dagProgress = module.exports = function dagProgress(
 	adjacencies :Map<Vertex, Set<Vertex>>,
 	vertexOptions :Map<Vertex, VertexOptions>
 ) :Map<Vertex, Progress> {
+	adjacencies = normalizeAdjacencies( adjacencies );
 	vertexOptions = normalizedVertexOptions( adjacencies, vertexOptions );
 
 	let adjacenciesReversed = reverse( adjacencies );
@@ -35,7 +36,7 @@ module.exports = function dagProgress(
 
 
 
-const normalizedVertexOptions = exports.normalizedVertexOptions = function( adjacencies, vertexOptions ) {
+const normalizedVertexOptions = dagProgress.normalizedVertexOptions = function( adjacencies, vertexOptions ) {
 	let defaultVertexOptions = () => ({ progress: true });
 
 	if( vertexOptions == null ) {
@@ -62,19 +63,45 @@ const normalizedVertexOptions = exports.normalizedVertexOptions = function( adja
 
 
 
-const reverse = exports.reverse = function( adjacencies ) {
-	let adjacenciesReversed = new Map();
+const normalizeAdjacencies = dagProgress.normalizeAdjacencies = function( adjacencies ) {
+	let normedAdjs = new Map( adjacencies );
 
+	// Basically all we're doing is adding sinks as vertices with explicitly no next-edges.
+	// TODO: This may enable some optimizations in other parts.
 	adjacencies.forEach( ( adjs, va ) => {
 		adjs.forEach( vb => {
-			let adjsRev = adjacenciesReversed.get( vb );
-
-			if( adjsRev == null ) {
-				adjsRev = new Set();
-				adjacenciesReversed.set( vb, adjsRev );
+			if( normedAdjs.has( vb ) === false ) {
+				normedAdjs.set( vb, new Set() );
 			}
+		});
+	});
 
-			adjsRev.add( va );
+	return normedAdjs;
+};
+
+
+
+const reverse = dagProgress.reverse = function( adjacencies ) {
+	let adjacenciesReversed = new Map();
+
+	let getAdjsRev = ( v ) => {
+		let adjsRev = adjacenciesReversed.get( v );
+
+		if( adjsRev == null ) {
+			adjsRev = new Set();
+			adjacenciesReversed.set( v, adjsRev );
+		}
+
+		return adjsRev;
+	}
+
+	adjacencies.forEach( ( adjs, va ) => {
+		let adjsRevA = getAdjsRev( va );
+
+		adjs.forEach( vb => {
+			let adjsRevB = getAdjsRev( vb );
+
+			adjsRevB.add( va );
 		});
 	});
 
@@ -83,7 +110,22 @@ const reverse = exports.reverse = function( adjacencies ) {
 
 
 
-const topologicalOrder = exports.topologicalOrder = function( adjacencies ) :Array<any> {
+const topologicalOrder = dagProgress.topologicalOrder = function( adjacencies ) :Array<any> {
+	if( adjacencies.size === 0 ) {
+		return [];
+	}
+
+	// toposort doesn't handle graphs with no edges (acyc graphs of one vertex)
+	if( adjacencies.size === 1 ) {
+		let topoOrder = [];
+
+		adjacencies.forEach( ( adjs, v ) => {
+			topoOrder[ 0 ] = v;
+		});
+
+		return topoOrder;
+	}
+
 	let adjsArray = [];
 
 	adjacencies.forEach( ( adjs, va ) => {
@@ -98,7 +140,7 @@ const topologicalOrder = exports.topologicalOrder = function( adjacencies ) :Arr
 
 
 
-const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOptions ) {
+const pathLengths = dagProgress.pathLengths = function( adjacencies, order, vertexOptions ) {
 	let defaultOptions = { progress: true };
 	let lengths = new Map();
 
@@ -153,7 +195,7 @@ const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOp
 
 
 
-const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward, pathLengthsReverse, vertexOptions ) {
+const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsForward, pathLengthsReverse, vertexOptions ) {
 	let progresses = new Map();
 
 	pathLengthsForward.forEach( ( lf, v ) => {

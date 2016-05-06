@@ -5,6 +5,64 @@ import toposort from 'toposort';
 
 
 
+test( `normalizeAdjacencies should produce two entries in the adjacencies list of a graph of two vertices`, t => {
+	let graph = new Map([
+		[ "Hello", new Set([ "Friend" ]) ]
+	]);
+
+	let normalized = dagProgress.normalizeAdjacencies( graph );
+
+	t.is( normalized.size, 2,
+		`normalized should have two entries.` );
+
+	t.true( normalized.has( "Friend" ),
+		`The entry "Friend" should be in normalized.` );
+
+	t.is( normalized.get( "Friend" ).size, 0,
+		`Entry "Friend" should point to a size-0 set.` );
+});
+
+
+
+test( `reverse should have the same number of entries as a normalized forward adjacency list`, t => {
+	let graph = new Map([
+		[ "Hello", new Set([ "Friend" ]) ]
+	]);
+
+	let normalized = dagProgress.normalizeAdjacencies( graph );
+	let reversed = dagProgress.reverse( normalized );
+
+	t.is( reversed.size, normalized.size,
+		`reversed should have the same size as normalized.` );
+
+	t.true( reversed.has( "Hello" ),
+		`The entry "Hello" should be in reversed.` );
+
+	t.is( reversed.get( "Hello" ).size, 0,
+		`Entry "Hello" should point to a size-0 set.` );
+});
+
+
+
+test( `a graph of 1 vertex should be the same after being reversed`, t => {
+	let graph = new Map([
+		[ "All Alone :(", new Set() ]
+	]);
+
+	let reversed = dagProgress.reverse( graph );
+
+	t.is( graph.size, reversed.size,
+		`A normalized graph and its reverse should be the same size.` );
+
+	t.true( reversed.has( "All Alone :(" ),
+		`The reversed graph should have an entry for "All Alone :("` );
+
+	t.is( reversed.get( "All Alone :(" ).size, 0,
+		`The reversed graph should have an empty set as the value of the entry for "All Alone :("` );
+});
+
+
+
 test( `the same graph in different valid topological orders should produce the same vertex progress values`, t => {
 	let graphA = new Map([
 		[ "Start", new Set([ "Decide", "OhOkay" ]) ],
