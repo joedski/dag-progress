@@ -134,3 +134,28 @@ test( `graph with no-progress vertices at start should have progress values of 0
 	t.not( progresses.get( 'Start 2' ).fraction.d, 0,
 		`"Start 2" should have a progress fraction with non-0 denominator.` );
 });
+
+
+
+test( `graph with only one vertex and no edges should have progress of 1 for that vertex if progress:true`, t => {
+	let progressOf = ( fraction ) => ({
+		value: Number( fraction ),
+		fraction
+	});
+
+	let graph = new Map([
+		[ "I'm all alone :(", new Set() ]
+	]);
+
+	let expectedProgresses = new Map([
+		[ "I'm all alone :(", progressOf( new Fraction( 0, 1 ) ) ]
+	]);
+
+	let progresses = dagProgress( graph );
+
+	t.true( progresses.has( "I'm all alone :(" ),
+		`Resultant progresses has a value for "I'm all alone :(".` );
+
+	t.is( progresses.get( "I'm all alone :(" ).value, 0,
+		`Resultant progress value for "I'm all alone :(" is 0.` );
+});
