@@ -56,7 +56,7 @@ const render = ({ props, context }) => {
 	let stepProgress = context.vertexProgresses.get( props.step.id );
 
 	return (
-		h.( 'div', { 'class': 'interaction-progress' }, [
+		h( 'div', { 'class': 'interaction-progress' }, [
 			`Progress: ${ Math.round( stepProgress.value * 100 ) }%`
 		])
 	);
