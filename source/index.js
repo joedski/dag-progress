@@ -230,7 +230,15 @@ const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsFor
 		let increments = [];
 
 		// last fraction should be the same as the full fraction.
-		increments[ options.increments - 1 ] = { fraction, value: Number( fraction ) };
+		increments[ options.increments - 1 ] = {
+			fraction,
+			value: Number( fraction ),
+			longestAfter: lr - ownProgress,
+			longestBefore: lf - ownProgress,
+			own: ownProgress,
+			increment: options.increments,
+			incrementCount: options.increments
+		};
 
 		// options.increments - 1 because we already have the final amount.
 		for( let incrI = 0, incrMax = options.increments - 1; incrI < incrMax; ++incrI ) {
