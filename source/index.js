@@ -3,8 +3,14 @@
 const Fraction = require( 'fraction.js' );
 const toposort = require( 'toposort' );
 
+const defaultVertexOptions = () => ({
+	progress: true,
+	increments: 1
+});
+
 type VertexOptions = {
-	progress?: boolean
+	progress?: boolean,
+	increments?: number
 };
 
 type Progress = {
@@ -37,7 +43,7 @@ const dagProgress = module.exports = function dagProgress(
 
 
 const normalizedVertexOptions = dagProgress.normalizedVertexOptions = function( adjacencies, vertexOptions ) {
-	let defaultVertexOptions = () => ({ progress: true });
+	// let defaultVertexOptions = () => ({ progress: true, increments: 1 });
 
 	if( vertexOptions == null ) {
 		vertexOptions = new Map();
@@ -141,7 +147,8 @@ const topologicalOrder = dagProgress.topologicalOrder = function( adjacencies ) 
 
 
 const pathLengths = dagProgress.pathLengths = function( adjacencies, order, vertexOptions ) {
-	let defaultOptions = { progress: true };
+	// let defaultOptions = { progress: true };
+	let defaultOptions = defaultVertexOptions();
 	let lengths = new Map();
 
 	let length = ( v ) => {
@@ -197,10 +204,11 @@ const pathLengths = dagProgress.pathLengths = function( adjacencies, order, vert
 
 const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsForward, pathLengthsReverse, vertexOptions ) {
 	let progresses = new Map();
+	let defaultOptions = defaultVertexOptions();
 
 	pathLengthsForward.forEach( ( lf, v ) => {
 		let lr = pathLengthsReverse.get( v ) || 0;
-		let options = vertexOptions.get( v ) || { progress: true };
+		let options = vertexOptions.get( v ) || defaultOptions;
 		let ownProgress;
 
 		// This is to make up for double-counting the current vertex.
@@ -213,11 +221,32 @@ const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsFor
 			ownProgress = 0;
 		}
 
-		let fraction = (new Fraction( lf )).div( lf + lr - ownProgress );
+		let numeratorFull = lf;
+		let numeratorEmpty = lf - ownProgress;
+		let denominator = lf + lr - ownProgress;
+
+		let fraction = new Fraction( numeratorFull, denominator );
+
+		let increments = [];
+
+		// last fraction should be the same as the full fraction.
+		increments[ options.increments - 1 ] = { fraction, value: Number( fraction ) };
+
+		// options.increments - 1 because we already have the final amount.
+		for( let incrI = 0, incrMax = options.increments - 1; incrI < incrMax; ++incrI ) {
+			let incrementFractionBase = new Fraction( numeratorEmpty, denominator );
+			let incrementFractionPartial = new Fraction( (incrI + 1) * ownProgress, denominator * options.increments );
+			let incrementFractionPartialSum = incrementFractionBase.add( incrementFractionPartial );
+			increments[ incrI ] = {
+				fraction: incrementFractionPartialSum,
+				value: Number( incrementFractionPartialSum )
+			};
+		}
 
 		let progress = {
 			fraction: fraction,
 			value: Number( fraction ),
+			increments,
 			// This allows doing things like calculating partial-graph progress.
 			longestAfter: lr - ownProgress,
 			longestBefore: lf - ownProgress,

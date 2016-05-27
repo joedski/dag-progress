@@ -261,3 +261,47 @@ test( `graph with only one vertex and no edges should have progress of 1 for tha
 	t.is( progresses.get( "I'm all alone :(" ).value, 1,
 		`Resultant progress value for "I'm all alone :(" is 1.` );
 });
+
+
+
+test( `increments vertex option should produce 'partial-progress' entries on the 'increments' property of a progress object`, t => {
+	let graph = new Map([
+		[ "Hello", new Set([ "Friend" ]) ]
+	]);
+
+	let options = new Map([
+		[ "Friend", { progress: true, increments: 3 }]
+	]);
+
+	let graphProgresses = dagProgress( graph, options );
+
+	let progressHello = graphProgresses.get( 'Hello' );
+	let progressFriend = graphProgresses.get( 'Friend' );
+
+	t.is( progressHello.increments.length, 1,
+		`entries should have 1 increment by default.` );
+
+	t.true( progressHello.increments[ 0 ].fraction.equals( progressHello.fraction ),
+		`fraction of single increment of an entry with default increment count should equal its full-progress fraction.` );
+
+	t.is( progressFriend.increments.length, 3,
+		`entries should have the number of increments specified in their options.` );
+
+	t.true( progressFriend.increments[ 2 ].fraction.equals( progressFriend.fraction ),
+		`fraction of last of many increments of an entry should equal that entry's full-progress fraction.` );
+
+	t.true( progressFriend.increments[ 0 ].value > progressHello.value,
+		`first increment should be greater than the previous vertex's full progress.` );
+
+	let increments = progressFriend.increments;
+	t.true( increments[ 0 ].value < increments[ 1 ].value && increments[ 1 ].value < increments[ 2 ].value,
+		`increments should be in ascending order from 0 to options.increments.` );
+
+	let incr1 = new Fraction( 1, 2 ).add( 1, 6 );
+	t.true( increments[ 0 ].fraction.n == incr1.n && increments[ 0 ].fraction.d == incr1.d,
+		`given a two vertex graph where the second has 3 increments, the first increment of that second vertex should equal 4/6.` );
+
+	let incr2 = new Fraction( 1, 2 ).add( 2, 6 );
+	t.true( increments[ 1 ].fraction.n == incr2.n && increments[ 1 ].fraction.d == incr2.d,
+		`given a two vertex graph where the second has 3 increments, the second increment of that second vertex should equal 5/6.` );
+});

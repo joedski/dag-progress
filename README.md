@@ -30,6 +30,9 @@ Related Types:
 - `Vertex: any` Though you should probably stick to `Symbol`s, `string`s, or `number`s.
 - `VertexOptions: { progress?: boolean }` Holds various options for a Vertex.
 	- `progress?: boolean` Optional flag determining if a Vertex should contribute to the User's Progress or not.  If omitted, assumed to be `true`.
+	- `increments?: number` Optional integer determining how many partial increments of progress should be precalculated for this vertex.  If omitted, assumed to be `1`.
+		- This is useful for things like partial progress during intermediate steps within a vertex when it is inconvenient to split that vertex into multiple real vertices.
+		- Note that setting `progress: false` obviates this, though the increments will still be calculated.  They will all just have the same value.
 - `Progress: { value: number, fraction: Fraction }`
 
 #### Example
