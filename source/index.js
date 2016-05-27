@@ -239,7 +239,12 @@ const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsFor
 			let incrementFractionPartialSum = incrementFractionBase.add( incrementFractionPartial );
 			increments[ incrI ] = {
 				fraction: incrementFractionPartialSum,
-				value: Number( incrementFractionPartialSum )
+				value: Number( incrementFractionPartialSum ),
+				longestAfter: lr - ownProgress,
+				longestBefore: lf - ownProgress,
+				own: ownProgress,
+				increment: incrI + 1,
+				incrementCount: options.increments
 			};
 		}
 
