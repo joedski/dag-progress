@@ -33,8 +33,10 @@ const dagProgress = module.exports = function dagProgress(
 	let orderReverse = topologicalOrder( adjacenciesReversed );
 	// let orderReverse = orderForward.slice();
 	// orderReverse.reverse();
-	let pathLengthsForward = pathLengths( adjacencies, orderForward, vertexOptions );
-	let pathLengthsReversed = pathLengths( adjacenciesReversed, orderReverse, vertexOptions );
+	// let pathLengthsForward = pathLengths( adjacencies, orderForward, vertexOptions );
+	// let pathLengthsReversed = pathLengths( adjacenciesReversed, orderReverse, vertexOptions );
+	let pathLengthsForward = pathLengths( adjacenciesReversed, orderForward, vertexOptions );
+	let pathLengthsReversed = pathLengths( adjacencies, orderReverse, vertexOptions );
 	let progresses = vertexProgresses( pathLengthsForward, pathLengthsReversed, vertexOptions );
 
 	return progresses;
@@ -146,55 +148,45 @@ const topologicalOrder = dagProgress.topologicalOrder = function( adjacencies ) 
 
 
 
-const pathLengths = dagProgress.pathLengths = function( adjacencies, order, vertexOptions ) {
-	// let defaultOptions = { progress: true };
+const pathLengths = dagProgress.pathLengths = function( adjacenciesReversed, order, vertexOptions ) {
 	let defaultOptions = defaultVertexOptions();
 	let lengths = new Map();
 
 	let length = ( v ) => {
-		// Potential optimization: If we find the sources first, we can preemptively assign them values based on their progress option.
+		let lengthValue;
+
 		if( lengths.has( v ) === false ) {
-			let initial;
-			let options = vertexOptions.get( v ) || defaultOptions;
-
-			if( options.progress === false ) {
-				initial = 0;
-			}
-			else {
-				initial = 1;
-			}
-
-			lengths.set( v, initial );
-			return initial;
+			lengthValue = 0;
+			lengths.set( v, lengthValue );
+		}
+		else {
+			lengthValue = lengths.get( v ) || 0;
 		}
 
-		// (|| 1) from flow.
-		return lengths.get( v ) || 1;
-	}
+		return lengthValue;
+	};
 
-	order.forEach( v => {
-		let currentValue = length( v );
-		let nextVertices = adjacencies.get( v );
+	order.forEach( cv => {
+		let previousVertices = adjacenciesReversed.get( cv ) || new Set();
+		// let currentOptions = vertexOptions.get( cv ) || defaultOptions;
 
-		// Flow stuff.  Shouldn't really be needed.
-		if( nextVertices == null ) return;
+		if( previousVertices.size === 0 ) {
+			lengths.set( cv, 0 );
+		}
 
-		nextVertices.forEach( nv => {
-			let currentNextValue = length( nv );
-			let newNextValue;
-			let nextOptions = vertexOptions.get( nv ) || defaultOptions;
+		previousVertices.forEach( pv => {
+			let currentLength = length( cv );
+			let newCurrentLength = length( pv );
+			let previousOptions = vertexOptions.get( pv ) || defaultOptions;
 
-			if( nextOptions.progress === false ) {
-				newNextValue = currentValue;
-			}
-			else {
-				newNextValue = currentValue + 1;
+			if( previousOptions.progress ) {
+				newCurrentLength = newCurrentLength + 1;
 			}
 
-			if( newNextValue > currentNextValue ) {
-				lengths.set( nv, newNextValue );
+			if( newCurrentLength > currentLength ) {
+				lengths.set( cv, newCurrentLength );
 			}
-		});
+		})
 	});
 
 	return lengths;
@@ -206,53 +198,47 @@ const vertexProgresses = dagProgress.vertexProgresses = function( pathLengthsFor
 	let progresses = new Map();
 	let defaultOptions = defaultVertexOptions();
 
-	pathLengthsForward.forEach( ( lf, v ) => {
-		let lr = pathLengthsReverse.get( v ) || 0;
+	pathLengthsForward.forEach( ( longestBefore, v ) => {
+		let longestAfter = pathLengthsReverse.get( v ) || 0;
 		let options = vertexOptions.get( v ) || defaultOptions;
 		let ownProgress;
 
-		// This is to make up for double-counting the current vertex.
-		// If it doesn't contribute to progress, then it's still double counted,
-		// it's just that 2 * 0 is 0.
-		if( options.progress !== false ) {
+		let progressObject = ( fraction ) => ({
+			fraction,
+			value: Number( fraction ),
+			longestBefore,
+			longestAfter,
+			own: ownProgress,
+		});
+
+		if( options.progress === true ) {
 			ownProgress = 1;
 		}
 		else {
 			ownProgress = 0;
 		}
 
-		let numeratorFull = lf;
-		let numeratorEmpty = lf - ownProgress;
-		let denominator = lf + lr - ownProgress;
+		let numeratorFull = longestBefore + ownProgress;
+		let numeratorEmpty = longestBefore;
+		let denominator = longestBefore + longestAfter + ownProgress;
 
 		let fraction = new Fraction( numeratorFull, denominator );
-
 		let increments = [];
 
 		for( let incrI = 0, incrMax = options.increments; incrI < incrMax; ++incrI ) {
 			let incrementFractionBase = new Fraction( numeratorEmpty, denominator );
-			let incrementFractionPartial = new Fraction( (incrI + 1) * ownProgress, denominator * options.increments );
-			let incrementFractionPartialSum = incrementFractionBase.add( incrementFractionPartial );
-			increments[ incrI ] = {
-				fraction: incrementFractionPartialSum,
-				value: Number( incrementFractionPartialSum ),
-				longestAfter: lr - ownProgress,
-				longestBefore: lf - ownProgress,
-				own: ownProgress,
-				increment: incrI + 1,
-				incrementCount: options.increments
-			};
+			let incrementFractionPartial = new Fraction( (incrI + 1), denominator * incrMax )
+				.mul( ownProgress )
+				;
+			let incrementFractionSum = incrementFractionBase.add( incrementFractionPartial );
+
+			increments[ incrI ] = progressObject( incrementFractionSum );
+			increments[ incrI ].increment = incrI + 1;
+			increments[ incrI ].incrementCount = incrMax;
 		}
 
-		let progress = {
-			fraction: fraction,
-			value: Number( fraction ),
-			increments,
-			// This allows doing things like calculating partial-graph progress.
-			longestAfter: lr - ownProgress,
-			longestBefore: lf - ownProgress,
-			own: ownProgress
-		};
+		let progress = progressObject( fraction );
+		progress.increments = increments;
 
 		progresses.set( v, progress );
 	});

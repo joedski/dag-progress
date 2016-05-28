@@ -264,7 +264,7 @@ test( `graph with only one vertex and no edges should have progress of 1 for tha
 
 
 
-test( `increments vertex option should produce 'partial-progress' entries on the 'increments' property of a progress object`, t => {
+test( `'increments' vertex option should produce 'partial-progress' entries on the 'increments' property of a progress object`, t => {
 	let graph = new Map([
 		[ "Hello", new Set([ "Friend" ]) ]
 	]);
@@ -304,4 +304,116 @@ test( `increments vertex option should produce 'partial-progress' entries on the
 	let incr2 = new Fraction( 1, 2 ).add( 2, 6 );
 	t.true( increments[ 1 ].fraction.n == incr2.n && increments[ 1 ].fraction.d == incr2.d,
 		`given a two vertex graph where the second has 3 increments, the second increment of that second vertex should equal 5/6.` );
+});
+
+
+
+test( `'increments' vertex option when specified with 'progress: false' should produce useless/identical 'partial-progress' entries on the 'increments' property of a progress object`, t => {
+	let graph = new Map([
+		[ "Hello", new Set([ "Friend" ]) ]
+	]);
+
+	let options = new Map([
+		[ "Friend", { progress: false, increments: 3 }]
+	]);
+
+	let graphProgresses = dagProgress( graph, options );
+
+	let progressHello = graphProgresses.get( 'Hello' );
+	let progressFriend = graphProgresses.get( 'Friend' );
+
+	t.is( progressHello.increments.length, 1,
+		`entries should have 1 increment by default.` );
+
+	t.true( progressHello.increments[ 0 ].fraction.equals( progressHello.fraction ),
+		`fraction of single increment of an entry with default increment count should equal its full-progress fraction.` );
+
+	t.is( progressFriend.increments.length, 3,
+		`entries should have the number of increments specified in their options.` );
+
+	t.true( progressFriend.increments[ 2 ].fraction.equals( progressFriend.fraction ),
+		`fraction of last of many increments of an entry should equal that entry's full-progress fraction.` );
+
+	let increments = progressFriend.increments;
+	t.true( increments[ 0 ].value == increments[ 1 ].value && increments[ 1 ].value == increments[ 2 ].value,
+		`increments should all have the same value.` );
+});
+
+
+
+test( `test case for issue #2: multiple progress:false vertices with merging path producing incorrect progress values`, t => {
+	let graph = new Map([
+		[ 'PrePreStart', new Set([ 'PreStart' ]) ],
+		[ 'PreStart', new Set([ 'Start' ]) ],
+		[ 'Start', new Set([ 'Branch' ]) ],
+		[ 'Branch', new Set([ 'A', 'B' ]) ],
+		[ 'A', new Set([ 'A to End' ]) ],
+		[ 'B', new Set([ 'End' ]) ],
+		[ 'A to End', new Set([ 'End' ]) ],
+	]);
+
+	let graphOptions = new Map([
+		[ 'Branch', { progress: false }],
+		[ 'A', { progress: false }],
+		[ 'B', { progress: false }],
+		[ 'A to End', { progress: false }],
+		[ 'End', { progress: false }],
+	]);
+
+	let graphNormalized = dagProgress.normalizeAdjacencies( graph );
+	let optionsNormalized = dagProgress.normalizedVertexOptions( graph, graphOptions );
+	let order = dagProgress.topologicalOrder( graphNormalized );
+	let orderReversed = dagProgress.topologicalOrder( dagProgress.reverse( graphNormalized ) );
+	let lengthsForward = dagProgress.pathLengths( dagProgress.reverse( graphNormalized ), order, graphOptions );
+	let lengthsReverse = dagProgress.pathLengths( graphNormalized, orderReversed, graphOptions );
+
+	t.true(
+		lengthsForward.get( 'PrePreStart' ) === 0,
+		`PrePreStart going forward should start at 0 going forward.`
+		);
+
+	t.true(
+		lengthsForward.get( 'PreStart' ) === 1 &&
+		lengthsForward.get( 'Start' ) === 2,
+		`PreStart and Start should have 1 and 2 respectively going forward.`
+	);
+
+	t.true(
+		lengthsForward.get( 'Branch' ) === 3 &&
+		lengthsForward.get( 'A' ) === 3 &&
+		lengthsForward.get( 'B' ) === 3 &&
+		lengthsForward.get( 'A to End' ) === 3 &&
+		lengthsForward.get( 'End' ) === 3,
+		`Every node after Start should have a calculated max path length of 3 going forward.` );
+
+	t.true(
+		lengthsReverse.get( 'Branch' ) === 0 &&
+		lengthsReverse.get( 'A' ) === 0 &&
+		lengthsReverse.get( 'B' ) === 0 &&
+		lengthsReverse.get( 'A to End' ) === 0 &&
+		lengthsReverse.get( 'End' ) === 0,
+		`Every node after Start should have a calculated max path length of 0 going reverse.` );
+
+	t.true(
+		lengthsReverse.get( 'Start' ) === 0,
+		`Start should have a calculated max path length of 1 going reverse.`
+		);
+
+
+	let progresses = dagProgress( graph, graphOptions );
+
+	t.is( progresses.get( 'Start' ).value, 1,
+		`Start should have a progress of 1 as the rest after it have the option 'progress: false'.` );
+
+	t.is( progresses.get( 'A' ).longestAfter, 0,
+		`'A' should have no progressing vertices after itself.` );
+
+	t.is( progresses.get( 'B' ).longestAfter, 0,
+		`'B' should have no progressing vertices after itself.` );
+
+	t.is( progresses.get( 'A to End' ).longestAfter, 0,
+		`'A to End' should have no progressing vertices after itself.` );
+
+	t.is( progresses.get( 'End' ).longestAfter, 0,
+		`'End' should have no progressing vertices after itself.` );
 });
