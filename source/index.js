@@ -1,189 +1,261 @@
 // @flow
 
-const Fraction = require( 'fraction.js' );
-const toposort = require( 'toposort' );
+import toposort from 'toposort';
 
-type VertexOptions = {
-	progress?: boolean
+import {
+	has,
+	eachProp,
+} from './utils';
+
+
+
+/**
+ * Types
+ */
+
+/**
+ * The options a Node may have.
+ * @type {Object}
+ */
+export type NodeOptions = {
+	// The weight of any edge going to this node.
+	weight?: number,
 };
 
-type Progress = {
+/**
+ * All the options a Node must have after normalization.
+ * @type {Object}
+ */
+export type NodeOptionsRequired = {
+	weight: number,
+};
+
+/**
+ * The resultant Progress object created for each node.
+ * Usually all you will need is the `progress` property, but
+ * in some exotic cases you may wish or need to use the others.
+ * @type {Object}
+ */
+export type Progress = {
+	// Progress value of reaching this node.
+	// Usually this is all you need.
 	value: number,
-	fraction: Fraction
+	// Progress value of any node previous to this node.
+	before: number,
+	// Weight of this node.
+	own: number,
+	// Progress remaining after this node.
+	remaining: number,
+	// Raw values if for some reason you need to work with them.
+	// Unnormalized weight total to reach this node.
+	rawValue: number,
+	// Unnormalized weight total to reach any node before this one.
+	rawBefore: number,
+	// Unnormalized weight total left before completion.
+	rawRemaining: number,
+	// Total weight of the heaviest path that this node is a part of.
+	pathTotal: number,
 };
 
-// Bluh.
-type Vertex = any;
+/**
+ * An adjacency map of node ids to a list of next-ids.
+ * Arrays are assumed to be unsorted.
+ * @type {Object}
+ */
+export type AdjacencyMap = {
+	[nodeId: string]: Array<string>,
+};
 
-module.exports = function dagProgress(
-	adjacencies :Map<Vertex, Set<Vertex>>,
-	vertexOptions :Map<Vertex, VertexOptions>
-) :Map<Vertex, Progress> {
-	vertexOptions = normalizedVertexOptions( adjacencies, vertexOptions );
+/**
+ * Map of node ids to NodeOptions.
+ * @type {Object}
+ */
+export type NodeOptionsMap = {
+	[nodeId: string]: NodeOptions,
+};
 
-	let adjacenciesReversed = reverse( adjacencies );
-	let orderForward = topologicalOrder( adjacencies );
-	let orderReverse = topologicalOrder( adjacenciesReversed );
-	// let orderReverse = orderForward.slice();
-	// orderReverse.reverse();
-	let pathLengthsForward = pathLengths( adjacencies, orderForward, vertexOptions );
-	let pathLengthsReversed = pathLengths( adjacenciesReversed, orderReverse, vertexOptions );
-	let progresses = vertexProgresses( pathLengthsForward, pathLengthsReversed, vertexOptions );
+export type NodeOptionsMapRequired = {
+	[nodeId: string]: NodeOptionsRequired,
+};
 
-	return progresses;
+export type ProgressMap = {
+	[nodeId: string]: Progress,
+};
+
+export type PathWeightMap = {
+	[nodeId: string]: number,
 };
 
 
 
-const normalizedVertexOptions = exports.normalizedVertexOptions = function( adjacencies, vertexOptions ) {
-	let defaultVertexOptions = () => ({ progress: true });
+const DEFAULT_WEIGHT = 1;
 
-	if( vertexOptions == null ) {
-		vertexOptions = new Map();
-	}
-	else {
-		vertexOptions = new Map( vertexOptions );
-	}
 
-	adjacencies.forEach( ( adjs, va ) => {
-		if( vertexOptions.has( va ) === false ) {
-			vertexOptions.set( va, defaultVertexOptions() );
+
+export default function dagProgress(
+	adjacencies: AdjacencyMap,
+	nodeOptionsMap?: NodeOptionsMap = {},
+): ProgressMap {
+	const normedNodeOptionsMap = normalizeNodeOptionsMap( adjacencies, nodeOptionsMap );
+	const adjacenciesReversed = reverse( adjacencies );
+	const orderForward = topologicalOrder( adjacencies );
+	const orderReversed = topologicalOrder( adjacenciesReversed );
+
+	const pathWeightsForward = pathWeights( adjacencies, orderForward, normedNodeOptionsMap );
+	const pathWeightsReversed = pathWeights( adjacenciesReversed, orderReversed, normedNodeOptionsMap );
+
+	return nodeProgresses( pathWeightsForward, pathWeightsReversed, normedNodeOptionsMap );
+}
+
+const getDefaultNodeOptions = (weight = DEFAULT_WEIGHT) => ({
+	weight,
+});
+
+export function normalizeNodeOptionsMap(
+	adjacencies: AdjacencyMap,
+	nodeOptionsMap: NodeOptionsMap,
+): NodeOptionsMapRequired {
+	const normedNodeOptionsMap: NodeOptionsMapRequired = {};
+	const startNodes = Object.keys( adjacencies );
+
+	function setNodeOptions( nodeId ) {
+		// if( ! normedNodeOptionsMap[ nodeId ] ) {
+		if( ! has( normedNodeOptionsMap, nodeId ) ) {
+			normedNodeOptionsMap[ nodeId ] = getDefaultNodeOptions();
 		}
+		else {
+			normedNodeOptionsMap[ nodeId ] = {
+				...getDefaultNodeOptions(),
+				...nodeOptionsMap[ nodeId ],
+			};
+		}
+	}
 
-		adjs.forEach( vb => {
-			if( vertexOptions.has( vb ) === false ) {
-				vertexOptions.set( vb, defaultVertexOptions() );
-			}
-		});
+	startNodes.forEach(( startNodeId ) => {
+		setNodeOptions( startNodeId );
+		// ensure options are defined even for drain nodes. (nodes with no outgoing edges.)
+		adjacencies[ startNodeId ].forEach( setNodeOptions );
 	});
 
-	return vertexOptions;
-};
+	return normedNodeOptionsMap;
+}
 
+export function reverse( adjacencies: AdjacencyMap ): AdjacencyMap {
+	const adjacenciesReversed: AdjacencyMap = {};
 
-
-const reverse = exports.reverse = function( adjacencies ) {
-	let adjacenciesReversed = new Map();
-
-	adjacencies.forEach( ( adjs, va ) => {
-		adjs.forEach( vb => {
-			let adjsRev = adjacenciesReversed.get( vb );
-
-			if( adjsRev == null ) {
-				adjsRev = new Set();
-				adjacenciesReversed.set( vb, adjsRev );
+	eachProp( adjacencies, ( nextNodes, startNodeId ) => {
+		nextNodes.forEach(( nextNodeId ) => {
+			if( ! has( adjacenciesReversed, nextNodeId ) ) {
+				adjacenciesReversed[ nextNodeId ] = [];
 			}
 
-			adjsRev.add( va );
+			const reverseNextNodes = adjacenciesReversed[ nextNodeId ];
+			reverseNextNodes.push( startNodeId );
 		});
 	});
 
 	return adjacenciesReversed;
-};
+}
 
+export function topologicalOrder( adjacencies: AdjacencyMap ): Array<string> {
+	const edges = [];
 
-
-const topologicalOrder = exports.topologicalOrder = function( adjacencies ) :Array<any> {
-	let adjsArray = [];
-
-	adjacencies.forEach( ( adjs, va ) => {
-		// adjsArray.push([ v, Array.from( adjs ) ]);
-		adjs.forEach( ( vb ) => {
-			adjsArray.push([ va, vb ]);
+	eachProp( adjacencies, ( nextNodes, startNodeId ) => {
+		nextNodes.forEach(( nextNodeId ) => {
+			edges.push([ startNodeId, nextNodeId ]);
 		});
 	});
 
-	return toposort( adjsArray );
-};
+	return toposort( edges );
+}
 
+/**
+ * Calculates the heaviest possible path weight prior to any node.
+ * Such a path weight will not include the node itself, although it will be every node
+ * before it in the heaviest path to that node.
+ *
+ * When used on a reversed graph with a corresponding topological order
+ * effectively calculates the heaviest possible remaining weight of the path after each node,
+ * not counting that node itself.
+ *
+ * For a given node, this remaining value, combined with the prior-to value and
+ * that node's own weight, is the weight of the heaviest path that contains that node.
+ *
+ * @param  {AdjacencyMap} adjacencies
+ *         The adjacencies of your thing.
+ * @param  {Array<string>} order
+ *         A valid topological order for the given adjacencies.
+ * @param  {NodeOptionsMapRequired} nodeOptionsMap
+ *         Normalized options.
+ * @return {PathWeightMap} Map of node ids to path-prior weights.
+ */
+export function pathWeights(
+	adjacencies: AdjacencyMap,
+	order: Array<string>,
+	nodeOptionsMap: NodeOptionsMapRequired,
+): PathWeightMap {
+	const weights: PathWeightMap = {};
 
-
-const pathLengths = exports.pathLengths = function( adjacencies, order, vertexOptions ) {
-	let defaultOptions = { progress: true };
-	let lengths = new Map();
-
-	let length = ( v ) => {
-		// Potential optimization: If we find the sources first, we can preemptively assign them values based on their progress option.
-		if( lengths.has( v ) === false ) {
-			let initial;
-			let options = vertexOptions.get( v ) || defaultOptions;
-
-			if( options.progress === false ) {
-				initial = 0;
-			}
-			else {
-				initial = 1;
-			}
-
-			lengths.set( v, initial );
-			return initial;
+	const weightOf = ( nodeId ) => {
+		if( has( weights, nodeId ) ) {
+			return weights[ nodeId ];
 		}
 
-		// (|| 1) from flow.
-		return lengths.get( v ) || 1;
-	}
+		const nodeOptions = nodeOptionsMap[ nodeId ] || getDefaultNodeOptions( 0 );
+		weights[ nodeId ] = nodeOptions.weight;
+		return weights[ nodeId ] || DEFAULT_WEIGHT;
+	};
 
-	order.forEach( v => {
-		let currentValue = length( v );
-		let nextVertices = adjacencies.get( v );
+	order.forEach( nodeId => {
+		const currentWeight = weightOf( nodeId );
+		const currentOptions = nodeOptionsMap[ nodeId ] || getDefaultNodeOptions();
+		const nextNodes = adjacencies[ nodeId ];
 
-		// Flow stuff.  Shouldn't really be needed.
-		if( nextVertices == null ) return;
+		if( ! nextNodes ) return;
 
-		nextVertices.forEach( nv => {
-			let currentNextValue = length( nv );
-			let newNextValue;
-			let nextOptions = vertexOptions.get( nv ) || defaultOptions;
+		nextNodes.forEach( nextNodeId => {
+			const currentNextWeight = weightOf( nextNodeId );
+			// const nextOptions = nodeOptionsMap[ nextNodeId ] || getDefaultNodeOptions();
+			// Removing need to subtract later due to double counting...
+			// const newNextWeight = currentWeight + nextOptions.weight;
+			const newNextWeight = currentWeight + currentOptions.weight;
 
-			if( nextOptions.progress === false ) {
-				newNextValue = currentValue;
-			}
-			else {
-				newNextValue = currentValue + 1;
-			}
-
-			if( newNextValue > currentNextValue ) {
-				lengths.set( nv, newNextValue );
+			// Changing this to < calculates the smallest path weights.
+			if( currentWeight > currentNextWeight ) {
+				weights[ nextNodeId ] = newNextWeight;
 			}
 		});
 	});
 
-	return lengths;
-};
+	return weights;
+}
 
+export function nodeProgresses(
+	pathWeightsForward: PathWeightMap,
+	pathWeightsReversed: PathWeightMap,
+	nodeOptionsMap: NodeOptionsMapRequired,
+): ProgressMap {
+	const progresses: ProgressMap = {};
 
+	eachProp( pathWeightsForward, ( weightFore, nodeId ) => {
+		const weightRev = pathWeightsReversed[ nodeId ];
+		const options = nodeOptionsMap[ nodeId ];
+		const ownWeight = options.weight;
 
-const vertexProgresses = exports.vertexProgresses = function( pathLengthsForward, pathLengthsReverse, vertexOptions ) {
-	let progresses = new Map();
+		const pathTotal = (weightFore + ownWeight + weightRev);
 
-	pathLengthsForward.forEach( ( lf, v ) => {
-		let lr = pathLengthsReverse.get( v ) || 0;
-		let options = vertexOptions.get( v ) || { progress: true };
-		let ownProgress;
-
-		// This is to make up for double-counting the current vertex.
-		// If it doesn't contribute to progress, then it's still double counted,
-		// it's just that 2 * 0 is 0.
-		if( options.progress !== false ) {
-			ownProgress = 1;
-		}
-		else {
-			ownProgress = 0;
-		}
-
-		let fraction = (new Fraction( lf )).div( lf + lr - ownProgress );
-
-		let progress = {
-			fraction: fraction,
-			value: Number( fraction ),
-			// This allows doing things like calculating partial-graph progress.
-			longestAfter: lr - ownProgress,
-			longestBefore: lf - ownProgress,
-			own: ownProgress
+		progresses[ nodeId ] = {
+			value: (weightFore + ownWeight) / pathTotal,
+			before: weightFore / pathTotal,
+			own: ownWeight / pathTotal,
+			remaining: weightRev,
+			rawValue: (weightFore + ownWeight),
+			rawOwn: ownWeight,
+			rawBefore: weightFore,
+			rawRemaining: weightRev,
+			pathTotal,
 		};
-
-		progresses.set( v, progress );
 	});
 
 	return progresses;
-};
+}
