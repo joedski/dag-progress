@@ -51,6 +51,9 @@ export type Progress = {
 	rawValue: number,
 	// Unnormalized weight total to reach any node before this one.
 	rawBefore: number,
+	// Unnormalized weight contribution of this node.
+	// Equal to the weight passed in, or 1 by default.
+	rawOwn: number,
 	// Unnormalized weight total left before completion.
 	rawRemaining: number,
 	// Total weight of the heaviest path that this node is a part of.
@@ -62,7 +65,7 @@ export type Progress = {
  * Arrays are assumed to be unsorted.
  * @type {Object}
  */
-export type AdjacencyMap = {
+export type AdjacencyListMap = {
 	[nodeId: string]: Array<string>,
 };
 
@@ -93,7 +96,7 @@ const DEFAULT_WEIGHT = 1;
 
 
 export default function dagProgress(
-	adjacencies: AdjacencyMap,
+	adjacencies: AdjacencyListMap,
 	nodeOptionsMap?: NodeOptionsMap = {},
 ): ProgressMap {
 	const normedNodeOptionsMap = normalizeNodeOptionsMap( adjacencies, nodeOptionsMap );
