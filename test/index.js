@@ -1,8 +1,6 @@
 import test from 'ava';
 import { eachProp } from '../source/utils';
 import dagProgress from '../source';
-import Fraction from 'fraction.js';
-// import toposort from 'toposort';
 
 
 
@@ -25,201 +23,186 @@ import Fraction from 'fraction.js';
 
 
 test( `the same graph in different valid topological orders should produce the same vertex progress values`, t => {
-	// let graphA = new Map([
-	// 	[ "Start", new Set([ "Decide", "OhOkay" ]) ],
-	// 	[ "Decide", new Set([ "DoOneThing", "StillNo" ]) ],
-	// 	[ "DoOneThing", new Set([ "DoAnother" ]) ],
-	// 	[ "OhOkay", new Set([ "StillNo" ]) ],
-	// 	[ "DoAnother", new Set([ "WellThatWasFun" ]) ],
-	// 	[ "StillNo", new Set([ "WellThatWasFun" ]) ],
-	// 	[ "WellThatWasFun", new Set([ "Bye" ]) ],
-	// ]);
-
-	// // Differs by the order of next vertices from "Start" and "Decide".
-	// let graphB = new Map([
-	// 	[ "Start", new Set([ "OhOkay", "Decide" ]) ],
-	// 	[ "Decide", new Set([ "StillNo", "DoOneThing" ]) ],
-	// 	[ "OhOkay", new Set([ "StillNo" ]) ],
-	// 	[ "DoOneThing", new Set([ "DoAnother" ]) ],
-	// 	[ "DoAnother", new Set([ "WellThatWasFun" ]) ],
-	// 	[ "StillNo", new Set([ "WellThatWasFun" ]) ],
-	// 	[ "WellThatWasFun", new Set([ "Bye" ]) ],
-	// ]);
-
 	let graphA = {
-		"Start": new Set([ "Decide", "OhOkay" ]),
-		"Decide": new Set([ "DoOneThing", "StillNo" ]),
-		"DoOneThing": new Set([ "DoAnother" ]),
-		"OhOkay": new Set([ "StillNo" ]),
-		"DoAnother": new Set([ "WellThatWasFun" ]),
-		"StillNo": new Set([ "WellThatWasFun" ]),
-		"WellThatWasFun": new Set([ "Bye" ]),
+		"Start": [ "Decide", "OhOkay" ],
+		"Decide": [ "DoOneThing", "StillNo" ],
+		"DoOneThing": [ "DoAnother" ],
+		"OhOkay": [ "StillNo" ],
+		"DoAnother": [ "WellThatWasFun" ],
+		"StillNo": [ "WellThatWasFun" ],
+		"WellThatWasFun": [ "Bye" ],
 	};
 
 	// Differs by the order of next vertices from "Start" and "Decide".
 	let graphB = {
-		"Start": new Set([ "OhOkay", "Decide" ]),
-		"Decide": new Set([ "StillNo", "DoOneThing" ]),
-		"OhOkay": new Set([ "StillNo" ]),
-		"DoOneThing": new Set([ "DoAnother" ]),
-		"DoAnother": new Set([ "WellThatWasFun" ]),
-		"StillNo": new Set([ "WellThatWasFun" ]),
-		"WellThatWasFun": new Set([ "Bye" ]),
+		"Start": [ "OhOkay", "Decide" ],
+		"Decide": [ "StillNo", "DoOneThing" ],
+		"OhOkay": [ "StillNo" ],
+		"DoOneThing": [ "DoAnother" ],
+		"DoAnother": [ "WellThatWasFun" ],
+		"StillNo": [ "WellThatWasFun" ],
+		"WellThatWasFun": [ "Bye" ],
 	};
 
 	let progressesA = dagProgress( graphA );
 	let progressesB = dagProgress( graphB );
 
-	// t.plan( progressesA.size );
 	t.plan( Object.keys( progressesA ).length );
 
 	eachProp( progressesA, ( progress, nodeId ) => {
 		t.true( progress.rawValue === progressesB[ nodeId ].rawValue );
 	});
-
-	// progressesA.forEach( ( progress, v ) => {
-	// 	t.true( progress.fraction.equals( progressesB.get( v ).fraction ) );
-	// });
 });
 
-// TODO: Update all the tests.
-
-// test.skip( `graph should produce same result as hand calculated result`, t => {
-// 	let graph = new Map([
-// 		[ "Start", new Set([ "Decide", "OhOkay" ]) ],
-// 		[ "Decide", new Set([ "DoOneThing", "StillNo" ]) ],
-// 		[ "DoOneThing", new Set([ "DoAnother" ]) ],
-// 		[ "OhOkay", new Set([ "StillNo" ]) ],
-// 		[ "DoAnother", new Set([ "WellThatWasFun" ]) ],
-// 		[ "StillNo", new Set([ "WellThatWasFun" ]) ],
-// 		[ "WellThatWasFun", new Set([ "Bye" ]) ],
-// 	]);
-
-// 	let progresses = dagProgress( graph );
-
-// 	let progressOf = ( fraction ) => ({
-// 		value: Number( fraction ),
-// 		fraction
-// 	});
-
-// 	let expectedProgresses = new Map([
-// 		[ "Start", progressOf( new Fraction( 1, 6 ) ) ],
-// 		[ "Decide", progressOf( new Fraction( 2, 6 ) ) ],
-// 		[ "OhOkay", progressOf( new Fraction( 2, 5 ) ) ],
-// 		[ "DoOneThing", progressOf( new Fraction( 3, 6 ) ) ],
-// 		[ "DoAnother", progressOf( new Fraction( 4, 6 ) ) ],
-// 		[ "StillNo", progressOf( new Fraction( 3, 5 ) ) ],
-// 		[ "WellThatWasFun", progressOf( new Fraction( 5, 6 ) ) ],
-// 		[ "Bye", progressOf( new Fraction( 6, 6 ) ) ],
-// 	]);
-
-// 	t.plan( expectedProgresses.size );
-
-// 	expectedProgresses.forEach( ( p, v ) => {
-// 		t.is( p.value, progresses.get( v ).value,
-// 			`Vertex "${ v }" should have progress ${ p.fraction.toFraction() }.` );
-// 	});
-// });
 
 
-
-test.skip( `longestBefore, longestAfter, and own should, when calculated together, yield a fraction of the same value`, t => {
-	let graph = new Map([
-		[ "Start", new Set([ "Decide", "OhOkay" ]) ],
-		[ "Decide", new Set([ "DoOneThing", "StillNo" ]) ],
-		[ "DoOneThing", new Set([ "DoAnother" ]) ],
-		[ "OhOkay", new Set([ "StillNo" ]) ],
-		[ "DoAnother", new Set([ "WellThatWasFun" ]) ],
-		[ "StillNo", new Set([ "WellThatWasFun" ]) ],
-		[ "WellThatWasFun", new Set([ "Bye" ]) ],
-	]);
+test( `graph should produce same result as hand calculated result`, t => {
+	let graph = {
+		"Start": [ "Decide", "OhOkay" ],
+		"Decide": [ "DoOneThing", "StillNo" ],
+		"DoOneThing": [ "DoAnother" ],
+		"OhOkay": [ "StillNo" ],
+		"DoAnother": [ "WellThatWasFun" ],
+		"StillNo": [ "WellThatWasFun" ],
+		"WellThatWasFun": [ "Bye" ],
+	};
 
 	let progresses = dagProgress( graph );
 
-	// let progressOf = ( fraction ) => ({
-	// 	value: Number( fraction ),
-	// 	fraction
-	// });
+	let progressOf = ( running, total ) => ({
+		own: 1 / total,
+		value: running / total,
+		before: (running - 1) / total,
+		remaining: (total - running) / total,
+		rawOwn: 1,
+		rawValue: running,
+		rawBefore: running - 1,
+		rawRemaining: total - running,
+		pathTotal: total,
+	});
 
-	// let expectedProgresses = new Map([
-	// 	[ "Start", progressOf( new Fraction( 1, 6 ) ) ],
-	// 	[ "Decide", progressOf( new Fraction( 2, 6 ) ) ],
-	// 	[ "OhOkay", progressOf( new Fraction( 2, 5 ) ) ],
-	// 	[ "DoOneThing", progressOf( new Fraction( 3, 6 ) ) ],
-	// 	[ "DoAnother", progressOf( new Fraction( 4, 6 ) ) ],
-	// 	[ "StillNo", progressOf( new Fraction( 3, 5 ) ) ],
-	// 	[ "WellThatWasFun", progressOf( new Fraction( 5, 6 ) ) ],
-	// 	[ "Bye", progressOf( new Fraction( 6, 6 ) ) ],
-	// ]);
+	let expectedProgresses = {
+		"Start": progressOf( 1, 6 ),
+		"Decide": progressOf( 2, 6 ),
+		"OhOkay": progressOf( 2, 5 ),
+		"DoOneThing": progressOf( 3, 6 ),
+		"DoAnother": progressOf( 4, 6 ),
+		"StillNo": progressOf( 3, 5 ),
+		"WellThatWasFun": progressOf( 5, 6 ),
+		"Bye": progressOf( 6, 6 ),
+	};
 
-	t.plan( progresses.size );
+	t.plan( Object.keys( expectedProgresses ).length );
 
-	progresses.forEach( ( p, v ) => {
-		let { fraction, longestBefore, longestAfter, own } = p;
-		let calculatedFraction = new Fraction( longestBefore + own, longestBefore + longestAfter + own );
-
-		let isEqual = fraction.d === calculatedFraction.d && fraction.n === calculatedFraction.n;
-
-		t.true( isEqual,
-			`Vertex "${ v }" calculated fraction ${ calculatedFraction.toFraction() } should equal algorithm-generated fraction ${ p.fraction.toFraction() }.` );
+	eachProp( expectedProgresses, ( p, v ) => {
+		t.deepEqual( p, progresses[ v ],
+			`Vertex "${ v }" should have progress ${ p.rawValue }/${ p.pathTotal }. (${ p.value.toFixed( 2 ) })` );
 	});
 });
 
 
 
-test.skip( `graph with no-progress vertices at end should have progress values of 1 for all such vertices`, t => {
-	let graph = new Map([
-		[ "Start", new Set([ "Middle 1", "Middle 2" ]) ],
-		[ "Middle 1", new Set([ "Middle 3" ]) ],
-		[ "Middle 2", new Set([ "Middle 3" ]) ],
-		[ "Middle 3", new Set([ "End 1" ]) ],
-		[ "End 1", new Set([ "End 2" ]) ],
-	]);
+test( `longestBefore, longestAfter, and own should, when calculated together, yield a fraction of the same value`, t => {
+	let graph = {
+		"Start": [ "Decide", "OhOkay" ],
+		"Decide": [ "DoOneThing", "StillNo" ],
+		"DoOneThing": [ "DoAnother" ],
+		"OhOkay": [ "StillNo" ],
+		"DoAnother": [ "WellThatWasFun" ],
+		"StillNo": [ "WellThatWasFun" ],
+		"WellThatWasFun": [ "Bye" ],
+	};
 
-	let options = new Map([
-		[ "End 1", { progress: false } ],
-		[ "End 2", { progress: false } ],
-	]);
+	let progresses = dagProgress( graph );
 
-	let progresses = dagProgress( graph, options );
+	let progressOf = ( running, total ) => ({
+		own: 1 / total,
+		value: running / total,
+		before: (running - 1) / total,
+		remaining: (total - running) / total,
+		rawOwn: 1,
+		rawValue: running,
+		rawBefore: running - 1,
+		rawRemaining: total - running,
+		pathTotal: total,
+	});
 
-	t.is(
-		progresses.get( 'End 1' ).fraction.n,
-		progresses.get( 'End 1' ).fraction.d,
-		`"End 1" should have a progress fraction that equals 1.` );
+	let expectedProgresses = {
+		"Start": progressOf( 1, 6 ),
+		"Decide": progressOf( 2, 6 ),
+		"OhOkay": progressOf( 2, 5 ),
+		"DoOneThing": progressOf( 3, 6 ),
+		"DoAnother": progressOf( 4, 6 ),
+		"StillNo": progressOf( 3, 5 ),
+		"WellThatWasFun": progressOf( 5, 6 ),
+		"Bye": progressOf( 6, 6 ),
+	};
 
-	t.is(
-		progresses.get( 'End 2' ).fraction.n,
-		progresses.get( 'End 2' ).fraction.d,
-		`"End 2" should have a progress fraction that equals 1.` );
+	t.plan( Object.keys( progresses ).length );
+
+	eachProp( progresses, ( p, v ) => {
+		let { rawValue, rawRemaining } = p;
+		let { rawValue: rawValueCalced, rawRemaining: rawRemainingCalced } = expectedProgresses[ v ];
+
+		let isEqual = (
+			rawValue === rawValueCalced
+			&& rawRemaining === rawRemainingCalced
+		);
+
+		t.true( isEqual,
+			`Vertex "${ v }" calculated fraction ${ rawValueCalced }/${ rawRemainingCalced } should equal algorithm-generated fraction ${ rawValue }/${ rawRemaining }.` );
+	});
 });
 
 
 
-test.skip( `graph with no-progress vertices at start should have progress values of 0 for all such vertices`, t => {
-	let graph = new Map([
-		[ "Start 1", new Set([ "Start 2" ]) ],
-		[ "Start 2", new Set([ "Middle 1", "Middle 2" ]) ],
-		[ "Middle 1", new Set([ "Middle 3" ]) ],
-		[ "Middle 2", new Set([ "Middle 3" ]) ],
-		[ "Middle 3", new Set([ "End 1" ]) ],
-		[ "End 1", new Set([ "End 2" ]) ],
-	]);
+test( `graph with no-progress vertices at end should have progress values of 1 for all such vertices`, t => {
+	let graph = {
+		"Start": [ "Middle 1", "Middle 2" ],
+		"Middle 1": [ "Middle 3" ],
+		"Middle 2": [ "Middle 3" ],
+		"Middle 3": [ "End 1" ],
+		"End 1": [ "End 2" ],
+	};
 
-	let options = new Map([
-		[ "Start 1", { progress: false } ],
-		[ "Start 2", { progress: false } ],
-	]);
+	let options = {
+		"End 1": { weight: 0 },
+		"End 2": { weight: 0 },
+	};
 
 	let progresses = dagProgress( graph, options );
 
-	t.is( progresses.get( 'Start 1' ).fraction.n, 0,
-		`"Start 1" should have a progress fraction that equals 0.` );
-	t.not( progresses.get( 'Start 1' ).fraction.d, 0,
-		`"Start 1" should have a progress fraction with non-0 denominator.` );
+	t.is(
+		progresses[ 'End 1' ].value, 1,
+		`"End 1" should have a progress value that equals 1.` );
 
-	t.is( progresses.get( 'Start 2' ).fraction.n, 0,
-		`"Start 2" should have a progress fraction that equals 0.` );
-	t.not( progresses.get( 'Start 2' ).fraction.d, 0,
-		`"Start 2" should have a progress fraction with non-0 denominator.` );
+	t.is(
+		progresses[ 'End 2' ].value, 1,
+		`"End 2" should have a progress value that equals 1.` );
+});
+
+
+
+test( `graph with no-progress vertices at start should have progress values of 0 for all such vertices`, t => {
+	let graph = {
+		"Start 1": [ "Start 2" ],
+		"Start 2": [ "Middle 1", "Middle 2" ],
+		"Middle 1": [ "Middle 3" ],
+		"Middle 2": [ "Middle 3" ],
+		"Middle 3": [ "End 1" ],
+		"End 1": [ "End 2" ],
+	};
+
+	let options = {
+		"Start 1": { weight: 0 },
+		"Start 2": { weight: 0 },
+	};
+
+	let progresses = dagProgress( graph, options );
+
+	t.is( progresses[ 'Start 1' ].value, 0,
+		`"Start 1" should have a progress value that equals 0.` );
+
+	t.is( progresses[ 'Start 2' ].value, 0,
+		`"Start 2" should have a progress value that equals 0.` );
 });
