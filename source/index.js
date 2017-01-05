@@ -119,8 +119,11 @@ export function normalizeNodeOptionsMap(
 	const startNodes = Object.keys( adjacencies );
 
 	function setNodeOptions( nodeId ) {
-		// if( ! normedNodeOptionsMap[ nodeId ] ) {
-		if( ! has( normedNodeOptionsMap, nodeId ) ) {
+		if( has( normedNodeOptionsMap, nodeId ) ) {
+			return;
+		}
+
+		if( ! has( nodeOptionsMap, nodeId ) ) {
 			normedNodeOptionsMap[ nodeId ] = getDefaultNodeOptions();
 		}
 		else {
@@ -201,9 +204,8 @@ export function pathWeights(
 			return weights[ nodeId ];
 		}
 
-		const nodeOptions = nodeOptionsMap[ nodeId ] || getDefaultNodeOptions( 0 );
-		weights[ nodeId ] = nodeOptions.weight;
-		return weights[ nodeId ] || DEFAULT_WEIGHT;
+		weights[ nodeId ] = 0;
+		return weights[ nodeId ];
 	};
 
 	order.forEach( nodeId => {
@@ -215,13 +217,10 @@ export function pathWeights(
 
 		nextNodes.forEach( nextNodeId => {
 			const currentNextWeight = weightOf( nextNodeId );
-			// const nextOptions = nodeOptionsMap[ nextNodeId ] || getDefaultNodeOptions();
-			// Removing need to subtract later due to double counting...
-			// const newNextWeight = currentWeight + nextOptions.weight;
 			const newNextWeight = currentWeight + currentOptions.weight;
 
 			// Changing this to < calculates the smallest path weights.
-			if( currentWeight > currentNextWeight ) {
+			if( newNextWeight > currentNextWeight ) {
 				weights[ nextNodeId ] = newNextWeight;
 			}
 		});
@@ -248,7 +247,7 @@ export function nodeProgresses(
 			value: (weightFore + ownWeight) / pathTotal,
 			before: weightFore / pathTotal,
 			own: ownWeight / pathTotal,
-			remaining: weightRev,
+			remaining: weightRev / pathTotal,
 			rawValue: (weightFore + ownWeight),
 			rawOwn: ownWeight,
 			rawBefore: weightFore,
