@@ -3,6 +3,9 @@ import { eachProp, has } from '../source/utils';
 import dagProgress, {
 	normalizeAdjacencies,
 	reverse,
+	normalizedVertexOptions,
+	topologicalOrder,
+	pathLengths,
 } from '../source';
 
 function size( object ) {
@@ -274,45 +277,104 @@ test( `graph with no-progress vertices at start should have progress values of 0
 
 
 
-test.skip( `'increments' vertex option should produce 'partial-progress' entries on the 'increments' property of a progress object`, t => {
-	let graph = new Map([
-		[ "Hello", new Set([ "Friend" ]) ]
-	]);
+test( `test case for issue #2: multiple weight:0 vertices with merging path producing incorrect progress values`, t => {
+	let graph = {
+		 'PrePreStart': [ 'PreStart' ],
+		 'PreStart': [ 'Start' ],
+		 'Start': [ 'Branch' ],
+		 'Branch': [ 'A', 'B' ],
+		 'A': [ 'A to End' ],
+		 'B': [ 'End' ],
+		 'A to End': [ 'End' ],
+	};
 
-	let options = new Map([
-		[ "Friend", { progress: true, increments: 3 }]
-	]);
+	let graphOptions = {
+		 'Branch': { weight: 0 },
+		 'A': { weight: 0 },
+		 'B': { weight: 0 },
+		 'A to End': { weight: 0 },
+		 'End': { weight: 0 },
+	};
 
-	let graphProgresses = dagProgress( graph, options );
 
-	let progressHello = graphProgresses.get( 'Hello' );
-	let progressFriend = graphProgresses.get( 'Friend' );
+	// let graphNormalized = normalizeAdjacencies( graph );
+	// let optionsNormalized = normalizedVertexOptions( graph, graphOptions );
+	// let order = topologicalOrder( graphNormalized );
+	// let orderReversed = topologicalOrder( reverse( graphNormalized ) );
+	// let lengthsForward = pathLengths( reverse( graphNormalized ), order, graphOptions );
+	// let lengthsReverse = pathLengths( graphNormalized, orderReversed, graphOptions );
 
-	// t.is( progressHello.increments.length, 1,
-	// 	`entries should have 1 increment by default.` );
+	// t.true(
+	// 	lengthsForward[ 'PrePreStart' ] === 0,
+	// 	`PrePreStart going forward should start at 0 going forward.`
+	// 	);
 
-	// t.true( progressHello.increments[ 0 ].fraction.equals( progressHello.fraction ),
-	// 	`fraction of single increment of an entry with default increment count should equal its full-progress fraction.` );
+	// t.true(
+	// 	lengthsForward[ 'PreStart' ] === 1 &&
+	// 	lengthsForward[ 'Start' ] === 2,
+	// 	`PreStart and Start should have 1 and 2 respectively going forward.`
+	// );
 
-	// t.is( progressFriend.increments.length, 3,
-	// 	`entries should have the number of increments specified in their options.` );
+	// t.true(
+	// 	lengthsForward[ 'Branch' ] === 3 &&
+	// 	lengthsForward[ 'A' ] === 3 &&
+	// 	lengthsForward[ 'B' ] === 3 &&
+	// 	lengthsForward[ 'A to End' ] === 3 &&
+	// 	lengthsForward[ 'End' ] === 3,
+	// 	`Every node after Start should have a calculated max path length of 3 going forward.` );
 
-	// t.true( progressFriend.increments[ 2 ].fraction.equals( progressFriend.fraction ),
-	// 	`fraction of last of many increments of an entry should equal that entry's full-progress fraction.` );
+	// t.true(
+	// 	lengthsReverse[ 'Branch' ] === 0 &&
+	// 	lengthsReverse[ 'A' ] === 0 &&
+	// 	lengthsReverse[ 'B' ] === 0 &&
+	// 	lengthsReverse[ 'A to End' ] === 0 &&
+	// 	lengthsReverse[ 'End' ] === 0,
+	// 	`Every node after Start should have a calculated max path length of 0 going reverse.` );
 
-	// t.true( progressFriend.increments[ 0 ].value > progressHello.value,
-	// 	`first increment should be greater than the previous vertex's full progress.` );
+	// t.true(
+	// 	lengthsReverse[ 'Start' ] === 0,
+	// 	`Start should have a calculated max path length of 1 going reverse.`
+	// 	);
 
-	// let increments = progressFriend.increments;
-	// t.true( increments[ 0 ].value < increments[ 1 ].value && increments[ 1 ].value < increments[ 2 ].value,
-	// 	`increments should be in ascending order from 0 to options.increments.` );
 
-	// let incr1 = new Fraction( 1, 2 ).add( 1, 6 );
-	// t.true( increments[ 0 ].fraction.n == incr1.n && increments[ 0 ].fraction.d == incr1.d,
-	// 	`given a two vertex graph where the second has 3 increments, the first increment of that second vertex should equal 4/6.` );
+	let progresses = dagProgress( graph, graphOptions );
 
-	// let incr2 = new Fraction( 1, 2 ).add( 2, 6 );
-	// t.true( increments[ 1 ].fraction.n == incr2.n && increments[ 1 ].fraction.d == incr2.d,
-	// 	`given a two vertex graph where the second has 3 increments, the second increment of that second vertex should equal 5/6.` );
+	t.is( progresses[ 'PrePreStart' ].rawValue, 1,
+		`PrePreStart should have a raw value of 1.` );
+
+	t.is( progresses[ 'PrePreStart' ].pathTotal, 3,
+		`PrePreStart should have a pathTotal of 3.` );
+
+	t.is( progresses[ 'PreStart' ].rawValue, 2,
+		`PreStart should have a raw value of 2.` );
+
+	t.is( progresses[ 'PreStart' ].pathTotal, 3,
+		`PreStart should have a pathTotal of 3.` );
+
+	t.is( progresses[ 'Start' ].value, 1,
+		`Start should have a progress of 1 as the rest after it have the option 'weight: 0'.` );
+
+	t.is( progresses[ 'A' ].remaining, 0,
+		`'A' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'B' ].remaining, 0,
+		`'B' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'A to End' ].remaining, 0,
+		`'A to End' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'End' ].remaining, 0,
+		`'End' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'A' ].value, 1,
+		`'A' should have a progress value of 1.` );
+
+	t.is( progresses[ 'B' ].value, 1,
+		`'B' should have a progress value of 1.` );
+
+	t.is( progresses[ 'A to End' ].value, 1,
+		`'A to End' should have a progress value of 1.` );
+
+	t.is( progresses[ 'End' ].value, 1,
+		`'End' should have a progress value of 1.` );
 });
-

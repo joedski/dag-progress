@@ -119,6 +119,8 @@ const getDefaultNodeOptions = (weight = DEFAULT_WEIGHT) => ({
  * Ensures that every node is on an adjacency map's props,
  * where any sinks (nodes with no edges going _to_ other nodes)
  * are explicitly listed as nodes with zero-length lists.
+ *
+ * This prevents 1-node graphs from resulting in 0-node outputs.
  * @param  {AdjacencyListMap} rawAdjacencies
  *         The Raw AdjacencyListMap, which may not have sinks explicitly listed.
  * @return {AdjacencyListMap} AdjacencyListMap with all nodes, even sinks, represented.

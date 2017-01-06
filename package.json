@@ -34,7 +34,6 @@
   "author": "Joseph Sikorski <joedski@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "fraction.js": "^3.3.1",
     "toposort": "^0.2.12"
   },
   "devDependencies": {
