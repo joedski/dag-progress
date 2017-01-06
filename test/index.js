@@ -1,6 +1,13 @@
 import test from 'ava';
-import { eachProp } from '../source/utils';
-import dagProgress from '../source';
+import { eachProp, has } from '../source/utils';
+import dagProgress, {
+	normalizeAdjacencies,
+	reverse,
+} from '../source';
+
+function size( object ) {
+	return Object.keys( object ).length;
+}
 
 
 
@@ -19,6 +26,64 @@ import dagProgress from '../source';
 
 // 	t.snapshot( progresses );
 // });
+
+
+
+test( `normalizeAdjacencies should produce two entries in the adjacencies list of a graph of two vertices`, t => {
+	let graph = {
+		"Hello": [ "Friend" ],
+	};
+
+	let normalized = normalizeAdjacencies( graph );
+
+	t.is( size( normalized ), 2,
+		`normalized should have two entries.` );
+
+	t.true( has( normalized, "Friend" ),
+		`The entry "Friend" should be in normalized.` );
+
+	t.is( normalized.Friend.length, 0,
+		`Entry "Friend" should point to a size-0 set.` );
+});
+
+
+
+test( `reverse should have the same number of entries as a normalized forward adjacency list`, t => {
+	let graph = {
+		"Hello": [ "Friend" ],
+	};
+
+	let normalized = normalizeAdjacencies( graph );
+	let reversed = reverse( normalized );
+
+	t.is( size( reversed ), size( normalized ),
+		`reversed should have the same size as normalized.` );
+
+	t.true( has( reversed, "Hello" ),
+		`The entry "Hello" should be in reversed.` );
+
+	t.is( reversed[ "Hello" ].length, 0,
+		`Entry "Hello" should point to a size-0 set.` );
+});
+
+
+
+test( `a graph of 1 vertex should be the same after being reversed`, t => {
+	let graph = {
+		"All Alone :(": [],
+	};
+
+	let reversed = reverse( graph );
+
+	t.is( size( graph ), size( reversed ),
+		`A normalized graph and its reverse should be the same size.` );
+
+	t.true( has( reversed,  "All Alone :(" ),
+		`The reversed graph should have an entry for "All Alone :("` );
+
+	t.is( reversed[ "All Alone :(" ].length, 0,
+		`The reversed graph should have an empty set as the value of the entry for "All Alone :("` );
+});
 
 
 
@@ -206,3 +271,48 @@ test( `graph with no-progress vertices at start should have progress values of 0
 	t.is( progresses[ 'Start 2' ].value, 0,
 		`"Start 2" should have a progress value that equals 0.` );
 });
+
+
+
+test.skip( `'increments' vertex option should produce 'partial-progress' entries on the 'increments' property of a progress object`, t => {
+	let graph = new Map([
+		[ "Hello", new Set([ "Friend" ]) ]
+	]);
+
+	let options = new Map([
+		[ "Friend", { progress: true, increments: 3 }]
+	]);
+
+	let graphProgresses = dagProgress( graph, options );
+
+	let progressHello = graphProgresses.get( 'Hello' );
+	let progressFriend = graphProgresses.get( 'Friend' );
+
+	// t.is( progressHello.increments.length, 1,
+	// 	`entries should have 1 increment by default.` );
+
+	// t.true( progressHello.increments[ 0 ].fraction.equals( progressHello.fraction ),
+	// 	`fraction of single increment of an entry with default increment count should equal its full-progress fraction.` );
+
+	// t.is( progressFriend.increments.length, 3,
+	// 	`entries should have the number of increments specified in their options.` );
+
+	// t.true( progressFriend.increments[ 2 ].fraction.equals( progressFriend.fraction ),
+	// 	`fraction of last of many increments of an entry should equal that entry's full-progress fraction.` );
+
+	// t.true( progressFriend.increments[ 0 ].value > progressHello.value,
+	// 	`first increment should be greater than the previous vertex's full progress.` );
+
+	// let increments = progressFriend.increments;
+	// t.true( increments[ 0 ].value < increments[ 1 ].value && increments[ 1 ].value < increments[ 2 ].value,
+	// 	`increments should be in ascending order from 0 to options.increments.` );
+
+	// let incr1 = new Fraction( 1, 2 ).add( 1, 6 );
+	// t.true( increments[ 0 ].fraction.n == incr1.n && increments[ 0 ].fraction.d == incr1.d,
+	// 	`given a two vertex graph where the second has 3 increments, the first increment of that second vertex should equal 4/6.` );
+
+	// let incr2 = new Fraction( 1, 2 ).add( 2, 6 );
+	// t.true( increments[ 1 ].fraction.n == incr2.n && increments[ 1 ].fraction.d == incr2.d,
+	// 	`given a two vertex graph where the second has 3 increments, the second increment of that second vertex should equal 5/6.` );
+});
+
