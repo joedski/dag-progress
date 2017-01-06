@@ -1,6 +1,8 @@
 Progress in a Directed Acyclic Graph
 =====================================
 
+[![Build Status](https://travis-ci.org/joedski/dag-progress.svg?branch=master)](https://travis-ci.org/joedski/dag-progress)
+
 Given a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) (or Acyclic Digraph for short), calculate a Progress value for each vertex in the graph.
 
 I'm using this to display meaningful progress values to a User when they are going through a branching interaction which may allow them to skip over parts or take different courses through that interaction.  Representing the interaction as a directed acyclic graph allows this easily.
