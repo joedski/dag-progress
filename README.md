@@ -1,11 +1,15 @@
 Progress in a Directed Acyclic Graph
 =====================================
 
+[![Build Status](https://travis-ci.org/joedski/dag-progress.svg?branch=master)](https://travis-ci.org/joedski/dag-progress)
+
 Given a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) (or Acyclic Digraph for short), calculate a Progress value for each vertex in the graph.
 
 I'm using this to display meaningful progress values to a User when they are going through a branching interaction which may allow them to skip over parts or take different courses through that interaction.  Representing the interaction as a directed acyclic graph allows this easily.
 
 The progress calculation is very simple: Given a vertex, the length of the longest path possible from any source to that vertex divided by the length of the longest path possible from any source to any sink which conatains that vertex is the progress value for that vertex.  This definition works surprisingly well given even quite disparate branch lengths in an interaction, and handles no-progress vertices quite well, too.
+
+Note: As you might expect from a directed _acyclic_ graph, this library does not support cycles in your story graph.  To get a meaningful progress value in such cases, you should break any cycles before handing the graph to this code.
 
 
 
@@ -57,17 +61,10 @@ import dagProgress from 'dag-progress';
 let storyDag = myThingThatMakesMyStoryIntoAnAdjacencyList( myStory );
 let vertexProgresses = dagProgress( storyDag );
 
-// Stick those progresses in the our app's state somehere.
-// Or just grab it from some global service if that's your style.
-
-let store = createStore( reducer, initState({
-	vertexProgresses
-}));
-
 // Then, in some display component...
 
-const render = ({ props, context }) => {
-	let stepProgress = context.vertexProgresses[ props.step.id ];
+const render = ({ props }) => {
+	let stepProgress = vertexProgresses[ props.page.id ];
 
 	return (
 		h( 'div', { 'class': 'interaction-progress' }, [

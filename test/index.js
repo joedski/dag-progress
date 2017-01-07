@@ -1,6 +1,16 @@
 import test from 'ava';
-import { eachProp } from '../source/utils';
-import dagProgress from '../source';
+import { eachProp, has } from '../source/utils';
+import dagProgress, {
+	normalizeAdjacencies,
+	reverse,
+	normalizedVertexOptions,
+	topologicalOrder,
+	pathLengths,
+} from '../source';
+
+function size( object ) {
+	return Object.keys( object ).length;
+}
 
 
 
@@ -19,6 +29,64 @@ import dagProgress from '../source';
 
 // 	t.snapshot( progresses );
 // });
+
+
+
+test( `normalizeAdjacencies should produce two entries in the adjacencies list of a graph of two vertices`, t => {
+	let graph = {
+		"Hello": [ "Friend" ],
+	};
+
+	let normalized = normalizeAdjacencies( graph );
+
+	t.is( size( normalized ), 2,
+		`normalized should have two entries.` );
+
+	t.true( has( normalized, "Friend" ),
+		`The entry "Friend" should be in normalized.` );
+
+	t.is( normalized.Friend.length, 0,
+		`Entry "Friend" should point to a size-0 set.` );
+});
+
+
+
+test( `reverse should have the same number of entries as a normalized forward adjacency list`, t => {
+	let graph = {
+		"Hello": [ "Friend" ],
+	};
+
+	let normalized = normalizeAdjacencies( graph );
+	let reversed = reverse( normalized );
+
+	t.is( size( reversed ), size( normalized ),
+		`reversed should have the same size as normalized.` );
+
+	t.true( has( reversed, "Hello" ),
+		`The entry "Hello" should be in reversed.` );
+
+	t.is( reversed[ "Hello" ].length, 0,
+		`Entry "Hello" should point to a size-0 set.` );
+});
+
+
+
+test( `a graph of 1 vertex should be the same after being reversed`, t => {
+	let graph = {
+		"All Alone :(": [],
+	};
+
+	let reversed = reverse( graph );
+
+	t.is( size( graph ), size( reversed ),
+		`A normalized graph and its reverse should be the same size.` );
+
+	t.true( has( reversed,  "All Alone :(" ),
+		`The reversed graph should have an entry for "All Alone :("` );
+
+	t.is( reversed[ "All Alone :(" ].length, 0,
+		`The reversed graph should have an empty set as the value of the entry for "All Alone :("` );
+});
 
 
 
@@ -205,4 +273,108 @@ test( `graph with no-progress vertices at start should have progress values of 0
 
 	t.is( progresses[ 'Start 2' ].value, 0,
 		`"Start 2" should have a progress value that equals 0.` );
+});
+
+
+
+test( `test case for issue #2: multiple weight:0 vertices with merging path producing incorrect progress values`, t => {
+	let graph = {
+		 'PrePreStart': [ 'PreStart' ],
+		 'PreStart': [ 'Start' ],
+		 'Start': [ 'Branch' ],
+		 'Branch': [ 'A', 'B' ],
+		 'A': [ 'A to End' ],
+		 'B': [ 'End' ],
+		 'A to End': [ 'End' ],
+	};
+
+	let graphOptions = {
+		 'Branch': { weight: 0 },
+		 'A': { weight: 0 },
+		 'B': { weight: 0 },
+		 'A to End': { weight: 0 },
+		 'End': { weight: 0 },
+	};
+
+
+	// let graphNormalized = normalizeAdjacencies( graph );
+	// let optionsNormalized = normalizedVertexOptions( graph, graphOptions );
+	// let order = topologicalOrder( graphNormalized );
+	// let orderReversed = topologicalOrder( reverse( graphNormalized ) );
+	// let lengthsForward = pathLengths( reverse( graphNormalized ), order, graphOptions );
+	// let lengthsReverse = pathLengths( graphNormalized, orderReversed, graphOptions );
+
+	// t.true(
+	// 	lengthsForward[ 'PrePreStart' ] === 0,
+	// 	`PrePreStart going forward should start at 0 going forward.`
+	// 	);
+
+	// t.true(
+	// 	lengthsForward[ 'PreStart' ] === 1 &&
+	// 	lengthsForward[ 'Start' ] === 2,
+	// 	`PreStart and Start should have 1 and 2 respectively going forward.`
+	// );
+
+	// t.true(
+	// 	lengthsForward[ 'Branch' ] === 3 &&
+	// 	lengthsForward[ 'A' ] === 3 &&
+	// 	lengthsForward[ 'B' ] === 3 &&
+	// 	lengthsForward[ 'A to End' ] === 3 &&
+	// 	lengthsForward[ 'End' ] === 3,
+	// 	`Every node after Start should have a calculated max path length of 3 going forward.` );
+
+	// t.true(
+	// 	lengthsReverse[ 'Branch' ] === 0 &&
+	// 	lengthsReverse[ 'A' ] === 0 &&
+	// 	lengthsReverse[ 'B' ] === 0 &&
+	// 	lengthsReverse[ 'A to End' ] === 0 &&
+	// 	lengthsReverse[ 'End' ] === 0,
+	// 	`Every node after Start should have a calculated max path length of 0 going reverse.` );
+
+	// t.true(
+	// 	lengthsReverse[ 'Start' ] === 0,
+	// 	`Start should have a calculated max path length of 1 going reverse.`
+	// 	);
+
+
+	let progresses = dagProgress( graph, graphOptions );
+
+	t.is( progresses[ 'PrePreStart' ].rawValue, 1,
+		`PrePreStart should have a raw value of 1.` );
+
+	t.is( progresses[ 'PrePreStart' ].pathTotal, 3,
+		`PrePreStart should have a pathTotal of 3.` );
+
+	t.is( progresses[ 'PreStart' ].rawValue, 2,
+		`PreStart should have a raw value of 2.` );
+
+	t.is( progresses[ 'PreStart' ].pathTotal, 3,
+		`PreStart should have a pathTotal of 3.` );
+
+	t.is( progresses[ 'Start' ].value, 1,
+		`Start should have a progress of 1 as the rest after it have the option 'weight: 0'.` );
+
+	t.is( progresses[ 'A' ].remaining, 0,
+		`'A' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'B' ].remaining, 0,
+		`'B' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'A to End' ].remaining, 0,
+		`'A to End' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'End' ].remaining, 0,
+		`'End' should have no progressing vertices after itself.` );
+
+	t.is( progresses[ 'A' ].value, 1,
+		`'A' should have a progress value of 1.` );
+
+	t.is( progresses[ 'B' ].value, 1,
+		`'B' should have a progress value of 1.` );
+
+	t.is( progresses[ 'A to End' ].value, 1,
+		`'A to End' should have a progress value of 1.` );
+
+	t.is( progresses[ 'End' ].value, 1,
+		`'End' should have a progress value of 1.` );
 });

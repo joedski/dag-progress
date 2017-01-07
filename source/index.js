@@ -96,9 +96,10 @@ const DEFAULT_WEIGHT = 1;
 
 
 export default function dagProgress(
-	adjacencies: AdjacencyListMap,
+	rawAdjacencies: AdjacencyListMap,
 	nodeOptionsMap?: NodeOptionsMap = {},
 ): ProgressMap {
+	const adjacencies = normalizeAdjacencies( rawAdjacencies );
 	const normedNodeOptionsMap = normalizeNodeOptionsMap( adjacencies, nodeOptionsMap );
 	const adjacenciesReversed = reverse( adjacencies );
 	const orderForward = topologicalOrder( adjacencies );
@@ -114,8 +115,34 @@ const getDefaultNodeOptions = (weight = DEFAULT_WEIGHT) => ({
 	weight,
 });
 
+/**
+ * Ensures that every node is on an adjacency map's props,
+ * where any sinks (nodes with no edges going _to_ other nodes)
+ * are explicitly listed as nodes with zero-length lists.
+ *
+ * This prevents 1-node graphs from resulting in 0-node outputs.
+ * @param  {AdjacencyListMap} rawAdjacencies
+ *         The Raw AdjacencyListMap, which may not have sinks explicitly listed.
+ * @return {AdjacencyListMap} AdjacencyListMap with all nodes, even sinks, represented.
+ */
+export function normalizeAdjacencies(
+	rawAdjacencies: AdjacencyListMap,
+): AdjacencyListMap {
+	const normedAdjacencies = { ...rawAdjacencies };
+
+	eachProp( normedAdjacencies, ( nextNodes, nodeId ) => {
+		nextNodes.forEach( nextNodeId => {
+			if( ! has( normedAdjacencies, nextNodeId ) ) {
+				normedAdjacencies[ nextNodeId ] = [];
+			}
+		});
+	});
+
+	return normedAdjacencies;
+}
+
 export function normalizeNodeOptionsMap(
-	adjacencies: AdjacencyMap,
+	adjacencies: AdjacencyListMap,
 	nodeOptionsMap: NodeOptionsMap,
 ): NodeOptionsMapRequired {
 	const normedNodeOptionsMap: NodeOptionsMapRequired = {};
@@ -146,24 +173,43 @@ export function normalizeNodeOptionsMap(
 	return normedNodeOptionsMap;
 }
 
-export function reverse( adjacencies: AdjacencyMap ): AdjacencyMap {
-	const adjacenciesReversed: AdjacencyMap = {};
+export function reverse( adjacencies: AdjacencyListMap ): AdjacencyListMap {
+	// Doing this all in here is maybe faster than just quickly building than normalizing.
+
+	const adjacenciesReversed: AdjacencyListMap = {};
+
+	function getAdjsRev( nodeId ) {
+		let adjsRev = adjacenciesReversed[ nodeId ];
+
+		if( adjsRev == null ) {
+			adjsRev = [];
+			adjacenciesReversed[ nodeId ] = adjsRev;
+		}
+
+		return adjsRev;
+	}
+
+	function push( adjs, nodeId ) {
+		if( adjs.indexOf( nodeId ) === -1 ) {
+			adjs.push( nodeId );
+		}
+	}
 
 	eachProp( adjacencies, ( nextNodes, startNodeId ) => {
-		nextNodes.forEach(( nextNodeId ) => {
-			if( ! has( adjacenciesReversed, nextNodeId ) ) {
-				adjacenciesReversed[ nextNodeId ] = [];
-			}
+		getAdjsRev( startNodeId );
 
-			const reverseNextNodes = adjacenciesReversed[ nextNodeId ];
-			reverseNextNodes.push( startNodeId );
+		nextNodes.forEach( nextNodeId => {
+			const nextAdjsRev = getAdjsRev( nextNodeId );
+			// Naive implementation.  Probably horribly inefficient from calling indexOf all the time.
+			// Faster might be to build all values as objects, then mapValues with Object.keys.  maybe.
+			push( nextAdjsRev, startNodeId );
 		});
 	});
 
 	return adjacenciesReversed;
 }
 
-export function topologicalOrder( adjacencies: AdjacencyMap ): Array<string> {
+export function topologicalOrder( adjacencies: AdjacencyListMap ): Array<string> {
 	const edges = [];
 
 	eachProp( adjacencies, ( nextNodes, startNodeId ) => {
@@ -187,7 +233,7 @@ export function topologicalOrder( adjacencies: AdjacencyMap ): Array<string> {
  * For a given node, this remaining value, combined with the prior-to value and
  * that node's own weight, is the weight of the heaviest path that contains that node.
  *
- * @param  {AdjacencyMap} adjacencies
+ * @param  {AdjacencyListMap} adjacencies
  *         The adjacencies of your thing.
  * @param  {Array<string>} order
  *         A valid topological order for the given adjacencies.
@@ -196,7 +242,7 @@ export function topologicalOrder( adjacencies: AdjacencyMap ): Array<string> {
  * @return {PathWeightMap} Map of node ids to path-prior weights.
  */
 export function pathWeights(
-	adjacencies: AdjacencyMap,
+	adjacencies: AdjacencyListMap,
 	order: Array<string>,
 	nodeOptionsMap: NodeOptionsMapRequired,
 ): PathWeightMap {
