@@ -3,9 +3,9 @@ import { eachProp, has } from '../source/utils';
 import dagProgress, {
 	normalizeAdjacencies,
 	reverse,
-	normalizedVertexOptions,
-	topologicalOrder,
-	pathLengths,
+	// normalizedVertexOptions,
+	// topologicalOrder,
+	// pathLengths,
 } from '../source';
 
 function size( object ) {
@@ -279,21 +279,21 @@ test( `graph with no-progress vertices at start should have progress values of 0
 
 test( `test case for issue #2: multiple weight:0 vertices with merging path producing incorrect progress values`, t => {
 	let graph = {
-		 'PrePreStart': [ 'PreStart' ],
-		 'PreStart': [ 'Start' ],
-		 'Start': [ 'Branch' ],
-		 'Branch': [ 'A', 'B' ],
-		 'A': [ 'A to End' ],
-		 'B': [ 'End' ],
-		 'A to End': [ 'End' ],
+		'PrePreStart': [ 'PreStart' ],
+		'PreStart': [ 'Start' ],
+		'Start': [ 'Branch' ],
+		'Branch': [ 'A', 'B' ],
+		'A': [ 'A to End' ],
+		'B': [ 'End' ],
+		'A to End': [ 'End' ],
 	};
 
 	let graphOptions = {
-		 'Branch': { weight: 0 },
-		 'A': { weight: 0 },
-		 'B': { weight: 0 },
-		 'A to End': { weight: 0 },
-		 'End': { weight: 0 },
+		'Branch': { weight: 0 },
+		'A': { weight: 0 },
+		'B': { weight: 0 },
+		'A to End': { weight: 0 },
+		'End': { weight: 0 },
 	};
 
 
