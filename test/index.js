@@ -277,6 +277,36 @@ test( `graph with no-progress vertices at start should have progress values of 0
 
 
 
+test( `graph with no-progress in the whole graph should have progress values of 0 for all vertices`, t => {
+	let graph = {
+		"Start 1": [ "Start 2" ],
+		"Start 2": [ "Middle 1", "Middle 2" ],
+		"Middle 1": [ "Middle 3" ],
+		"Middle 2": [ "Middle 3" ],
+		"Middle 3": [ "End 1" ],
+		"End 1": [ "End 2" ],
+	};
+
+	let options = {
+		"Start 1": { weight: 0 },
+		"Start 2": { weight: 0 },
+    "Middle 1": { weight: 0 },
+    "Middle 2": { weight: 0 },
+    "Middle 3": { weight: 0 },
+    "End 1": { weight: 0 },
+    "End 2": { weight: 0 },
+	};
+
+	let progresses = dagProgress( graph, options );
+
+  Object.keys( graph ).forEach( ( nodeId ) => {
+    t.is( progresses[ nodeId ].value, 0,
+      `"${nodeId}" should have a progress value that equals 0.` );
+  });
+});
+
+
+
 test( `test case for issue #2: multiple weight:0 vertices with merging path producing incorrect progress values`, t => {
 	let graph = {
 		'PrePreStart': [ 'PreStart' ],

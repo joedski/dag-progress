@@ -278,6 +278,11 @@ export function pathWeights(
 	return weights;
 }
 
+function coalesceNaNToZero( value ) {
+	if( isNaN( value ) ) return 0;
+	return value;
+}
+
 export function nodeProgresses(
 	pathWeightsForward: PathWeightMap,
 	pathWeightsReversed: PathWeightMap,
@@ -293,10 +298,10 @@ export function nodeProgresses(
 		const pathTotal = (weightFore + ownWeight + weightRev);
 
 		progresses[ nodeId ] = {
-			value: (weightFore + ownWeight) / pathTotal,
-			before: weightFore / pathTotal,
-			own: ownWeight / pathTotal,
-			remaining: weightRev / pathTotal,
+			value: coalesceNaNToZero( (weightFore + ownWeight) / pathTotal ),
+			before: coalesceNaNToZero( weightFore / pathTotal ),
+			own: coalesceNaNToZero( ownWeight / pathTotal ),
+			remaining: coalesceNaNToZero( weightRev / pathTotal ),
 			rawValue: (weightFore + ownWeight),
 			rawOwn: ownWeight,
 			rawBefore: weightFore,
